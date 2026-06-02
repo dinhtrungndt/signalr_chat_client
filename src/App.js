@@ -1,9 +1,23 @@
+import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import AppRouter from './routers/AppRouter';
+
+// Cấu hình React Query: cache dữ liệu thông minh
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,  // Giữ cache 5 phút
+      retry: 1,                   // Thử lại 1 lần nếu lỗi
+      refetchOnWindowFocus: false, // Không gọi lại khi chuyển tab
+    },
+  },
+});
 
 function App() {
   return (
-    <div className="bg-black text-white min-h-screen flex items-center justify-center">
-      <h1>My First React App</h1>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <AppRouter />
+    </QueryClientProvider>
   );
 }
 

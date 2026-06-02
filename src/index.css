@@ -1,3 +1,170 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* =========================
+   BASE
+========================= */
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Nền sáng + nhẹ (đồng bộ login/register/chat) */
+  body {
+    background: radial-gradient(1200px 600px at 10% 10%, rgba(99, 102, 241, 0.18), transparent 60%),
+      radial-gradient(900px 600px at 90% 20%, rgba(59, 130, 246, 0.16), transparent 55%),
+      radial-gradient(900px 700px at 40% 100%, rgba(168, 85, 247, 0.14), transparent 60%),
+      #f6f7fb;
+    color: #0f172a;
+    overflow-x: hidden;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* Scrollbar gọn, sạch */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(15, 23, 42, 0.18);
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(15, 23, 42, 0.28);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* =========================
+   COMPONENTS
+========================= */
+@layer components {
+
+  /* Card (glass) sáng, clear, dùng cho Login/Register + panel */
+  .glass-card {
+    @apply rounded-2xl border bg-white/80 backdrop-blur-xl;
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow:
+      0 18px 40px rgba(15, 23, 42, 0.10),
+      0 1px 0 rgba(255, 255, 255, 0.65) inset;
+  }
+
+  /* Input sáng + focus rõ */
+  .input-field {
+    @apply w-full rounded-xl px-4 py-3 sm:py-3.5 text-sm sm:text-[15px] bg-white border text-slate-900 placeholder-slate-400 outline-none transition-all duration-200;
+    border-color: rgba(15, 23, 42, 0.10);
+  }
+
+  .input-field:hover {
+    border-color: rgba(15, 23, 42, 0.16);
+  }
+
+  .input-field:focus {
+    border-color: rgba(99, 102, 241, 0.55);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.18);
+  }
+
+  /* Fix autofill */
+  input.input-field:-webkit-autofill,
+  input.input-field:-webkit-autofill:hover,
+  input.input-field:-webkit-autofill:focus {
+    -webkit-text-fill-color: #0f172a;
+    transition: background-color 9999s ease-in-out 0s;
+    box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.92) inset;
+    border: 1px solid rgba(15, 23, 42, 0.10);
+  }
+
+  /* Button chính */
+  .btn-primary {
+    @apply w-full rounded-xl font-semibold text-white py-3 sm:py-3.5 text-sm sm:text-[15px] transition-all duration-200 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed;
+    background: linear-gradient(90deg, #6366f1 0%, #3b82f6 55%, #06b6d4 100%);
+    box-shadow: 0 12px 22px rgba(59, 130, 246, 0.22);
+  }
+
+  .btn-primary:hover {
+    filter: brightness(1.02);
+    box-shadow: 0 14px 26px rgba(59, 130, 246, 0.28);
+  }
+
+  /* Link */
+  .link-primary {
+    @apply font-medium text-indigo-600 hover:text-indigo-500 transition-colors;
+  }
+
+  /* Alert error */
+  .alert-error {
+    @apply px-4 py-3 rounded-xl text-sm border;
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.22);
+    color: rgb(185, 28, 28);
+  }
+
+  /* Avatar (dùng chung) */
+  .avatar {
+    @apply rounded-full object-cover flex-shrink-0;
+    background: linear-gradient(135deg, #6366f1 0%, #3b82f6 55%, #06b6d4 100%);
+  }
+
+  /* Bubble tin nhắn - đồng bộ theme sáng */
+  .msg-mine {
+    color: #ffffff;
+    background: linear-gradient(90deg, #6366f1 0%, #3b82f6 60%, #06b6d4 100%);
+    box-shadow: 0 10px 18px rgba(59, 130, 246, 0.18);
+  }
+
+  .msg-other {
+    @apply bg-white border border-slate-200 text-slate-800;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+  }
+
+  /* Optional: nút phụ (nếu cần dùng sau) */
+  .btn-secondary {
+    @apply w-full rounded-xl font-semibold py-3 sm:py-3.5 text-sm sm:text-[15px] bg-white/70 border border-slate-200 text-slate-900 hover:bg-white transition-all duration-200;
+  }
+}
+
+/* =========================
+   UTILITIES
+========================= */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
