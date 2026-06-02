@@ -61,6 +61,27 @@ const socketService = {
       if (groupId) setTyping('group', groupId, userId, false);
       else setTyping('direct', userId, userId, false);
     });
+
+    // ==========================================
+    // NHẬN SỰ KIỆN TỪ GROUP
+    // ==========================================
+    socket.on('addedToGroup', ({ groupId }) => {
+      // Báo server cho join phòng này
+      socket.emit('joinNewGroupRoom', groupId);
+      // Báo UI tải lại danh sách nhóm
+      window.dispatchEvent(new Event('group_updated'));
+    });
+
+    // ==========================================
+    // ONLINE/OFFLINE
+    // ==========================================
+    socket.on('userOnline', (userId) => {
+      useChatStore.getState().setOnlineStatus(userId, true);
+    });
+
+    socket.on('userOffline', (userId) => {
+      useChatStore.getState().setOnlineStatus(userId, false);
+    });
   },
 
   disconnect: () => {

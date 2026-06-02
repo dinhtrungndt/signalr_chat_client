@@ -1,14 +1,17 @@
 import { create } from 'zustand';
 
 const useChatStore = create((set, get) => ({
-  activeConversation: null, // { type: 'group'|'direct', id, name, avatar }
+  activeConversation: null, // { type: 'direct' | 'group', id: Number, name: String }
+  messages: {}, // { "direct_1": [...], "group_2": [...] }
+  typingUsers: {}, // { "direct_1": [...userIds] }
+  onlineUsers: {}, // { [userId]: boolean } // Trạng thái online của user
 
-  // Map lưu tin nhắn theo key: "group_1" hoặc "direct_5"
-  // { "group_1": [msg1, msg2, ...] }
-  messages: {},
-
-  // Danh sách người đang gõ: { "group_1": [userId1], "direct_5": [userId2] }
-  typingUsers: {},
+  setOnlineStatus: (userId, isOnline) => set((state) => ({
+    onlineUsers: {
+      ...state.onlineUsers,
+      [userId]: isOnline
+    }
+  })),
 
   setActiveConversation: (conversation) =>
     set({ activeConversation: conversation }),

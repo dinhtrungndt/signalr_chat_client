@@ -1,7 +1,8 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { useEffect, useRef, useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import GroupMembersModal from './GroupMembersModal';
 import messageApi from '../../api/message.api';
 import socketService from '../../services/socket.service';
 import useAuthStore from '../../stores/auth.store';
@@ -55,6 +56,7 @@ const EMPTY_ARRAY = [];
 
 const ChatWindow = ({ onOpenSidebar }) => {
   const activeConversation = useChatStore((s) => s.activeConversation);
+  const onlineUsers = useChatStore((s) => s.onlineUsers);
   const conversationKey = activeConversation ? `${activeConversation.type}_${activeConversation.id}` : null;
 
   // Tránh lỗi Infinite Loop của useSyncExternalStore bằng cách dùng mảng hằng số (EMPTY_ARRAY)
@@ -67,6 +69,7 @@ const ChatWindow = ({ onOpenSidebar }) => {
   const currentUser = useAuthStore((s) => s.user);
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isGroupMembersModalOpen, setIsGroupMembersModalOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const typingTimerRef = useRef(null);
 
@@ -173,13 +176,35 @@ const ChatWindow = ({ onOpenSidebar }) => {
           {activeConversation.name?.charAt(0)?.toUpperCase() || '?'}
         </div>
 
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-semibold text-slate-900 text-sm truncate">{activeConversation.name}</p>
-          <p className="text-xs text-slate-500">
-            {activeConversation.type === 'group' ? 'Nhóm' : 'Tin nhắn trực tiếp'}
+          <p className={`text-xs font-medium ${activeConversation.type === 'group' ? 'text-slate-500' : (onlineUsers[activeConversation.id] ? 'text-emerald-600' : 'text-slate-400')}`}>
+            {activeConversation.type === 'group' 
+              ? 'Nhóm' 
+              : (onlineUsers[activeConversation.id] ? 'Đang hoạt động' : 'Không hoạt động')}
           </p>
         </div>
+
+        {/* Nút xem thông tin nhóm */}
+        {activeConversation.type === 'group' && (
+          <button
+            onClick={() => setIsGroupMembersModalOpen(true)}
+            title="Xem thành viên"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition ml-auto"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+        )}
       </div>
+
+      {/* Group Members Modal */}
+      <GroupMembersModal
+        isOpen={isGroupMembersModalOpen}
+        onClose={() => setIsGroupMembersModalOpen(false)}
+        groupId={activeConversation.type === 'group' ? activeConversation.id : null}
+      />
 
       {/* Vùng tin nhắn */}
       <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4">

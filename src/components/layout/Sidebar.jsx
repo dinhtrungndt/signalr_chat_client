@@ -5,6 +5,7 @@ import userApi from '../../api/user.api';
 import useAuthStore from '../../stores/auth.store';
 import useChatStore from '../../stores/chat.store';
 import useDebounce from '../../hooks/useDebounce';
+import CreateGroupModal from './CreateGroupModal';
 
 const ConversationItem = ({ item, isActive, onClick }) => (
   <button
@@ -18,8 +19,13 @@ const ConversationItem = ({ item, isActive, onClick }) => (
     ].join(' ')}
   >
     {/* Avatar */}
-    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-      {item.name?.charAt(0)?.toUpperCase() || '?'}
+    <div className="relative">
+      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+        {item.name?.charAt(0)?.toUpperCase() || '?'}
+      </div>
+      {item.isOnline !== undefined && (
+        <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${item.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+      )}
     </div>
 
     <div className="flex-1 min-w-0">
@@ -34,9 +40,11 @@ const Sidebar = ({ onItemClick }) => {
   const logout = useAuthStore((s) => s.logout);
   const activeConversation = useChatStore((s) => s.activeConversation);
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
+  const onlineUsers = useChatStore((s) => s.onlineUsers);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('direct'); // 'direct' hoặc 'group'
+  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   // Gọi API lấy Groups
@@ -55,9 +63,17 @@ const Sidebar = ({ onItemClick }) => {
 
   const queryClient = useQueryClient();
   useEffect(() => {
-    const handleUpdate = () => queryClient.invalidateQueries({ queryKey: ['recent-chats'] });
-    window.addEventListener('chat_updated', handleUpdate);
-    return () => window.removeEventListener('chat_updated', handleUpdate);
+    // Ép buộc React Query phải gọi lại API ngay cả khi trình duyệt không được focus
+    const handleChatUpdate = () => queryClient.refetchQueries({ queryKey: ['recent-chats'], type: 'active' });
+    const handleGroupUpdate = () => queryClient.refetchQueries({ queryKey: ['my-groups'], type: 'active' });
+
+    window.addEventListener('chat_updated', handleChatUpdate);
+    window.addEventListener('group_updated', handleGroupUpdate);
+
+    return () => {
+      window.removeEventListener('chat_updated', handleChatUpdate);
+      window.removeEventListener('group_updated', handleGroupUpdate);
+    };
   }, [queryClient]);
 
   // Gọi API Tìm kiếm (khi gõ phím)
@@ -94,18 +110,21 @@ const Sidebar = ({ onItemClick }) => {
           </button>
         </div>
 
-        <div className="flex items-center gap-2.5 px-1 mb-4">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-xs font-bold">
-            {user?.fullName?.charAt(0)?.toUpperCase() || '?'}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-bold shadow-sm">
+            {user?.fullName?.charAt(0)?.toUpperCase()}
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-900 truncate">{user?.fullName}</p>
-            <p className="text-xs text-emerald-600">● Đang hoạt động</p>
+          <div>
+            <p className="font-semibold text-slate-900 text-sm">{user?.username}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+              <span className="text-xs text-emerald-600 font-medium">Đang hoạt động</span>
+            </div>
           </div>
         </div>
 
         {/* Search Input */}
-        <div className="relative">
+        <div className="relative mt-4">
           <input
             type="text"
             value={searchQuery}
@@ -136,7 +155,12 @@ const Sidebar = ({ onItemClick }) => {
                 {searchResults.map((u) => (
                   <ConversationItem
                     key={`search_${u.id}`}
-                    item={{ id: u.id, name: u.fullName, subtitle: u.username }}
+                    item={{ 
+                        id: u.id, 
+                        name: u.fullName, 
+                        subtitle: u.username,
+                        isOnline: onlineUsers[u.id]
+                    }}
                     isActive={false}
                     onClick={() => handleSelectConversation('direct', u.id, u.fullName)}
                   />
@@ -183,7 +207,8 @@ const Sidebar = ({ onItemClick }) => {
                           item={{ 
                             id: chat.id, 
                             name: chat.fullName, 
-                            subtitle: chat.lastMessage?.content || 'Nhấn để chat' 
+                            subtitle: chat.lastMessage?.content || 'Nhấn để chat',
+                            isOnline: onlineUsers[chat.id]
                           }}
                           isActive={activeConversation?.type === 'direct' && activeConversation?.id === chat.id}
                           onClick={() => handleSelectConversation('direct', chat.id, chat.fullName)}
@@ -195,7 +220,18 @@ const Sidebar = ({ onItemClick }) => {
               )}
 
               {activeTab === 'group' && (
-                <div>
+                <div className="flex flex-col h-full">
+                  <div className="mb-3 px-1">
+                    <button
+                      onClick={() => setIsCreateGroupModalOpen(true)}
+                      className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 border border-indigo-100"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                      </svg>
+                      Tạo nhóm mới
+                    </button>
+                  </div>
                   {isLoadingGroups ? (
                     <div className="text-center py-4 text-sm text-slate-500">Đang tải...</div>
                   ) : groups.length === 0 ? (
@@ -205,7 +241,13 @@ const Sidebar = ({ onItemClick }) => {
                       {groups.map((group) => (
                         <ConversationItem
                           key={`group_${group.id}`}
-                          item={{ id: group.id, name: group.name }}
+                          item={{ 
+                            id: group.id, 
+                            name: group.name,
+                            subtitle: group.lastMessage 
+                              ? `${group.lastMessage.senderName}: ${group.lastMessage.content}`
+                              : 'Nhấn để chat'
+                          }}
                           isActive={activeConversation?.type === 'group' && activeConversation?.id === group.id}
                           onClick={() => handleSelectConversation('group', group.id, group.name)}
                         />
@@ -223,6 +265,12 @@ const Sidebar = ({ onItemClick }) => {
       <div className="px-4 py-3 border-t border-slate-200/70 text-[11px] text-slate-400">
         © {new Date().getFullYear()} DVN Chat
       </div>
+
+      <CreateGroupModal
+        isOpen={isCreateGroupModalOpen}
+        onClose={() => setIsCreateGroupModalOpen(false)}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['my-groups'] })}
+      />
     </div>
   );
 };
