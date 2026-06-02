@@ -63,6 +63,9 @@ const useChatStore = create((set, get) => ({
       return { typingUsers: { ...state.typingUsers, [key]: updated } };
     });
   },
+
+  // Xóa toàn bộ dữ liệu khi đăng xuất
+  clear: () => set({ activeConversation: null, messages: {}, typingUsers: {} }),
 }));
 
 export default useChatStore;

@@ -30,7 +30,10 @@ const RegisterPage = () => {
   const onSubmit = async (data) => {
     setServerError('');
     try {
-      await registerUser(data);
+      const payload = { ...data };
+      if (!payload.phone) delete payload.phone; // Bỏ qua phone nếu rỗng
+
+      await registerUser(payload);
     } catch (err) {
       const apiErrors = err.response?.data?.errors;
       if (apiErrors?.length > 0) {

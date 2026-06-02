@@ -43,6 +43,11 @@ axiosClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Bỏ qua interceptor nếu API đang gọi là login, register, hoặc refresh
+    if (originalRequest.url.includes('/auth/login') || originalRequest.url.includes('/auth/register') || originalRequest.url.includes('/auth/refresh-token')) {
+      return Promise.reject(error);
+    }
+
     // Nếu lỗi 401 (token hết hạn) và chưa thử refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {

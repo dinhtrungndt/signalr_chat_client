@@ -95,6 +95,17 @@ const useAuthStore = create((set) => ({
     tokenStorage.clear();
     clearRefreshToken();
     set({ user: null, isAuthenticated: false });
+    
+    // Xóa bộ nhớ Zustand của Chat
+    import('./chat.store').then((module) => {
+      module.default.getState().clear();
+    });
+
+    // Xóa bộ nhớ đệm của React Query
+    import('../App').then((module) => {
+      module.queryClient.clear();
+    });
+
     // Ép ngắt kết nối Socket ngay lập tức
     import('../services/socket.service').then((module) => {
       module.default.disconnect();

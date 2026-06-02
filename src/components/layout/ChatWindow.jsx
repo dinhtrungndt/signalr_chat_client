@@ -51,13 +51,15 @@ const MessageItem = ({ message, isOwn }) => (
   </div>
 );
 
+const EMPTY_ARRAY = [];
+
 const ChatWindow = ({ onOpenSidebar }) => {
   const activeConversation = useChatStore((s) => s.activeConversation);
   const conversationKey = activeConversation ? `${activeConversation.type}_${activeConversation.id}` : null;
 
-  // Chỉ subscribe vào đúng mảng tin nhắn và typing của cuộc trò chuyện hiện tại
-  const messages = useChatStore((s) => s.messages[conversationKey] || []);
-  const typing = useChatStore((s) => s.typingUsers[conversationKey] || []);
+  // Tránh lỗi Infinite Loop của useSyncExternalStore bằng cách dùng mảng hằng số (EMPTY_ARRAY)
+  const messages = useChatStore((s) => s.messages[conversationKey] || EMPTY_ARRAY);
+  const typing = useChatStore((s) => s.typingUsers[conversationKey] || EMPTY_ARRAY);
 
   const initMessages = useChatStore((s) => s.initMessages);
   const addMessage = useChatStore((s) => s.addMessage);

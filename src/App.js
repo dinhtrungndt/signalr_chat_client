@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppRouter from './routers/AppRouter';
 
 // Cấu hình React Query: cache dữ liệu thông minh
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,  // Giữ cache 5 phút

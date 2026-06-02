@@ -48,6 +48,7 @@ const socketService = {
       const myId = useAuthStore.getState().user?.id;
       const otherId = message.senderId === myId ? message.receiverId : message.senderId;
       addMessage('direct', otherId, message);
+      window.dispatchEvent(new Event('chat_updated')); // Báo cho Sidebar cập nhật
     });
 
     // Typing indicator
@@ -81,7 +82,10 @@ const socketService = {
   sendDirectMessage: (receiverId, content, type = 'TEXT') => {
     return new Promise((resolve, reject) => {
       socket?.emit('sendDirectMessage', { receiverId, content, type }, (res) => {
-        if (res.success) resolve(res.data);
+        if (res.success) {
+          resolve(res.data);
+          window.dispatchEvent(new Event('chat_updated')); // Báo cho Sidebar cập nhật
+        }
         else reject(new Error(res.error));
       });
     });
