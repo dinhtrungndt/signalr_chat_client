@@ -41,6 +41,7 @@ const socketService = {
     // Nhận tin nhắn Group
     socket.on('receiveGroupMessage', (message) => {
       addMessage('group', message.groupId, message);
+      window.dispatchEvent(new Event('group_updated')); // Báo cho Sidebar cập nhật
     });
 
     // Nhận tin nhắn 1-1
@@ -93,7 +94,10 @@ const socketService = {
   sendGroupMessage: (groupId, content, type = 'TEXT') => {
     return new Promise((resolve, reject) => {
       socket?.emit('sendGroupMessage', { groupId, content, type }, (res) => {
-        if (res.success) resolve(res.data);
+        if (res.success) {
+          resolve(res.data);
+          window.dispatchEvent(new Event('group_updated')); // Báo cho Sidebar cập nhật
+        }
         else reject(new Error(res.error));
       });
     });

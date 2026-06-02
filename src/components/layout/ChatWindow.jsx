@@ -4,6 +4,7 @@ import { vi } from 'date-fns/locale';
 import React, { useState, useEffect, useRef } from 'react';
 import GroupMembersModal from './GroupMembersModal';
 import messageApi from '../../api/message.api';
+import uploadApi from '../../api/upload.api';
 import socketService from '../../services/socket.service';
 import useAuthStore from '../../stores/auth.store';
 import useChatStore from '../../stores/chat.store';
@@ -33,11 +34,33 @@ const MessageItem = ({ message, isOwn }) => (
 
       <div
         className={[
-          'px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words',
+          message.type === 'IMAGE' ? 'p-0.5 bg-transparent border border-slate-200' : 'px-4 py-2.5',
+          'rounded-2xl text-sm leading-relaxed break-words',
           isOwn ? 'msg-mine rounded-br-sm' : 'msg-other rounded-bl-sm',
         ].join(' ')}
       >
-        {message.content}
+        {message.type === 'TEXT' && message.content}
+        {message.type === 'IMAGE' && (
+          <img 
+            src={`http://localhost:1411${message.content}`} 
+            alt="Image" 
+            className="max-w-xs sm:max-w-sm rounded-xl object-contain cursor-pointer max-h-64"
+            onClick={() => window.open(`http://localhost:1411${message.content}`, '_blank')}
+          />
+        )}
+        {message.type === 'FILE' && (
+          <a 
+            href={`http://localhost:1411${message.content}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 underline"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+            </svg>
+            <span className="truncate max-w-[150px]">{message.content.split('/').pop()}</span>
+          </a>
+        )}
       </div>
 
       <p
@@ -69,9 +92,12 @@ const ChatWindow = ({ onOpenSidebar }) => {
   const currentUser = useAuthStore((s) => s.user);
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [isGroupMembersModalOpen, setIsGroupMembersModalOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const typingTimerRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const imageInputRef = useRef(null);
 
   // Fetch lịch sử tin nhắn từ API
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
@@ -103,6 +129,7 @@ const ChatWindow = ({ onOpenSidebar }) => {
   }, [messages.length]);
 
   // Gửi tin nhắn
+  // Gửi tin nhắn
   const handleSend = async () => {
     const content = inputText.trim();
     if (!content || isSending) return;
@@ -121,6 +148,38 @@ const ChatWindow = ({ onOpenSidebar }) => {
       console.error('Gửi tin nhắn thất bại:', err);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  // Xử lý Upload
+  const handleFileUpload = async (e, isImageOnly = false) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 20 * 1024 * 1024) {
+      alert('Kích thước file không được vượt quá 20MB!');
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const res = await uploadApi.uploadFile(file);
+      const fileData = res.data.data;
+      
+      const isImage = fileData.mimetype.startsWith('image/');
+      
+      if (activeConversation.type === 'group') {
+        await socketService.sendGroupMessage(activeConversation.id, fileData.url, isImage ? 'IMAGE' : 'FILE');
+      } else {
+        const msg = await socketService.sendDirectMessage(activeConversation.id, fileData.url, isImage ? 'IMAGE' : 'FILE');
+        addMessage('direct', activeConversation.id, msg);
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || 'Lỗi khi upload file');
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -243,7 +302,48 @@ const ChatWindow = ({ onOpenSidebar }) => {
 
       {/* Input gửi tin nhắn */}
       <div className="px-3 sm:px-4 py-3 border-t border-slate-200/70 bg-white/70 backdrop-blur-xl">
-        <div className="flex items-end gap-3">
+        <div className="flex items-end gap-2">
+          
+          {/* Nút Upload Ảnh */}
+          <button
+            type="button"
+            onClick={() => imageInputRef.current?.click()}
+            disabled={isUploading}
+            className="w-10 h-10 mb-0.5 flex-shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition"
+            title="Gửi hình ảnh"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </button>
+          <input 
+            type="file" 
+            ref={imageInputRef} 
+            hidden 
+            accept="image/*" 
+            onChange={(e) => handleFileUpload(e, true)}
+          />
+
+          {/* Nút Upload Tệp */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="w-10 h-10 mb-0.5 flex-shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition"
+            title="Đính kèm tệp"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+            </svg>
+          </button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            hidden 
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt" 
+            onChange={(e) => handleFileUpload(e, false)}
+          />
+
           <textarea
             value={inputText}
             onChange={handleInputChange}

@@ -1,4 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 import { useEffect, useState } from 'react';
 import groupApi from '../../api/group.api';
 import userApi from '../../api/user.api';
@@ -6,6 +8,22 @@ import useDebounce from '../../hooks/useDebounce';
 import useAuthStore from '../../stores/auth.store';
 import useChatStore from '../../stores/chat.store';
 import CreateGroupModal from './CreateGroupModal';
+
+const formatTime = (dateStr) => {
+  try {
+    return format(new Date(dateStr), 'HH:mm', { locale: vi });
+  } catch {
+    return '';
+  }
+};
+
+const getSubtitle = (lastMessage, prefix) => {
+  if (!lastMessage) return 'Nhấn để chat';
+  let text = lastMessage.content;
+  if (lastMessage.type === 'IMAGE') text = 'Đã gửi một hình ảnh';
+  if (lastMessage.type === 'FILE') text = 'Đã gửi một tệp đính kèm';
+  return prefix ? `${prefix}: ${text}` : text;
+};
 
 const ConversationItem = ({ item, isActive, onClick }) => (
   <button
@@ -32,6 +50,11 @@ const ConversationItem = ({ item, isActive, onClick }) => (
       <p className="text-sm font-medium text-slate-900 truncate">{item.name}</p>
       <p className="text-xs text-slate-500 truncate">{item.subtitle || 'Nhấn để chat'}</p>
     </div>
+    {item.time && (
+      <div className="text-[10px] text-slate-400 mb-auto mt-1 flex-shrink-0">
+        {item.time}
+      </div>
+    )}
   </button>
 );
 
@@ -201,19 +224,23 @@ const Sidebar = ({ onItemClick }) => {
                     <div className="text-center py-4 text-sm text-slate-500 italic">Chưa có tin nhắn</div>
                   ) : (
                     <div className="space-y-1">
-                      {recentChats.map((chat) => (
-                        <ConversationItem
-                          key={`chat_${chat.id}`}
-                          item={{
-                            id: chat.id,
-                            name: chat.fullName,
-                            subtitle: chat.lastMessage?.content ? (chat.lastMessage.isMine ? `Bạn: ${chat.lastMessage.content}` : `${chat.fullName.split(' ').pop()}: ${chat.lastMessage.content}`) : 'Nhấn để chat',
-                            isOnline: onlineUsers[chat.id]
-                          }}
-                          isActive={activeConversation?.type === 'direct' && activeConversation?.id === chat.id}
-                          onClick={() => handleSelectConversation('direct', chat.id, chat.fullName)}
-                        />
-                      ))}
+                      {recentChats.map((chat) => {
+                        const prefix = chat.lastMessage?.isMine ? 'Bạn' : chat.fullName.split(' ').pop();
+                        return (
+                          <ConversationItem
+                            key={`chat_${chat.id}`}
+                            item={{
+                              id: chat.id,
+                              name: chat.fullName,
+                              subtitle: getSubtitle(chat.lastMessage, prefix),
+                              isOnline: onlineUsers[chat.id],
+                              time: chat.lastMessage?.createdAt ? formatTime(chat.lastMessage.createdAt) : null,
+                            }}
+                            isActive={activeConversation?.type === 'direct' && activeConversation?.id === chat.id}
+                            onClick={() => handleSelectConversation('direct', chat.id, chat.fullName)}
+                          />
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -238,18 +265,22 @@ const Sidebar = ({ onItemClick }) => {
                     <div className="text-center py-4 text-sm text-slate-500 italic">Chưa tham gia nhóm nào</div>
                   ) : (
                     <div className="space-y-1">
-                      {groups.map((group) => (
-                        <ConversationItem
-                          key={`group_${group.id}`}
-                          item={{
-                            id: group.id,
-                            name: group.name,
-                            subtitle: group.lastMessage?.content ? `${group.lastMessage.senderName.split(' ').pop()}: ${group.lastMessage.content}` : 'Nhấn để chat',
-                          }}
-                          isActive={activeConversation?.type === 'group' && activeConversation?.id === group.id}
-                          onClick={() => handleSelectConversation('group', group.id, group.name)}
-                        />
-                      ))}
+                      {groups.map((group) => {
+                        const prefix = group.lastMessage?.senderName ? group.lastMessage.senderName.split(' ').pop() : '';
+                        return (
+                          <ConversationItem
+                            key={`group_${group.id}`}
+                            item={{
+                              id: group.id,
+                              name: group.name,
+                              subtitle: getSubtitle(group.lastMessage, prefix),
+                              time: group.lastMessage?.createdAt ? formatTime(group.lastMessage.createdAt) : null,
+                            }}
+                            isActive={activeConversation?.type === 'group' && activeConversation?.id === group.id}
+                            onClick={() => handleSelectConversation('group', group.id, group.name)}
+                          />
+                        );
+                      })}
                     </div>
                   )}
                 </div>
