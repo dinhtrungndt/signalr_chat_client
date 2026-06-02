@@ -47,15 +47,15 @@ const RegisterPage = () => {
   return (
   <div className="min-h-screen flex items-center justify-center px-4 sm:px-6">
     <div className="w-full max-w-md glass-card p-6 sm:p-8 md:p-9">
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex flex-col items-center mb-8">
         <img
           src="https://dvntechnology.com/assets/logo.png"
           alt="DVN Chat"
-          className="w-11 h-11 rounded-xl bg-white p-1 border border-black/5"
+          className="h-10 w-auto object-contain mb-4"
         />
-        <div>
+        <div className="text-center">
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Tạo tài khoản</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Nhanh gọn, rõ ràng, dễ dùng</p>
+          <p className="text-slate-500 text-sm mt-1">Nhanh gọn, rõ ràng, dễ dùng</p>
         </div>
       </div>
 

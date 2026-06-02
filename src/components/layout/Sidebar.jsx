@@ -96,7 +96,7 @@ const Sidebar = ({ onItemClick }) => {
       <div className="px-4 py-4 border-b border-slate-200/70">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
-            <img src="https://dvntechnology.com/assets/logo.png" alt="DVN" className="w-7 h-7" />
+            <img src="https://dvntechnology.com/assets/logo.png" alt="DVN" className="h-6 w-auto object-contain" />
             <span className="font-bold text-slate-900 text-lg">DVN Chat</span>
           </div>
           <button
@@ -207,7 +207,7 @@ const Sidebar = ({ onItemClick }) => {
                           item={{ 
                             id: chat.id, 
                             name: chat.fullName, 
-                            subtitle: chat.lastMessage?.content || 'Nhấn để chat',
+                            subtitle: chat.lastMessage?.content ? (chat.lastMessage.isMine ? `Bạn: ${chat.lastMessage.content}` : `${chat.fullName.split(' ').pop()}: ${chat.lastMessage.content}`) : 'Nhấn để chat',
                             isOnline: onlineUsers[chat.id]
                           }}
                           isActive={activeConversation?.type === 'direct' && activeConversation?.id === chat.id}
@@ -244,9 +244,7 @@ const Sidebar = ({ onItemClick }) => {
                           item={{ 
                             id: group.id, 
                             name: group.name,
-                            subtitle: group.lastMessage 
-                              ? `${group.lastMessage.senderName}: ${group.lastMessage.content}`
-                              : 'Nhấn để chat'
+                            subtitle: group.lastMessage?.content ? `${group.lastMessage.senderName.split(' ').pop()}: ${group.lastMessage.content}` : 'Nhấn để chat',
                           }}
                           isActive={activeConversation?.type === 'group' && activeConversation?.id === group.id}
                           onClick={() => handleSelectConversation('group', group.id, group.name)}
