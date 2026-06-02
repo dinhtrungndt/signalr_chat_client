@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import groupApi from '../../api/group.api';
 import userApi from '../../api/user.api';
+import useDebounce from '../../hooks/useDebounce';
 import useAuthStore from '../../stores/auth.store';
 import useChatStore from '../../stores/chat.store';
-import useDebounce from '../../hooks/useDebounce';
 import CreateGroupModal from './CreateGroupModal';
 
 const ConversationItem = ({ item, isActive, onClick }) => (
@@ -97,7 +97,7 @@ const Sidebar = ({ onItemClick }) => {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
             <img src="https://dvntechnology.com/assets/logo.png" alt="DVN" className="h-6 w-auto object-contain" />
-            <span className="font-bold text-slate-900 text-lg">DVN Chat</span>
+            <span className="font-bold text-slate-900 text-lg">Trò Chuyện</span>
           </div>
           <button
             onClick={logout}
@@ -155,9 +155,9 @@ const Sidebar = ({ onItemClick }) => {
                 {searchResults.map((u) => (
                   <ConversationItem
                     key={`search_${u.id}`}
-                    item={{ 
-                        id: u.id, 
-                        name: u.fullName, 
+                    item={{
+                        id: u.id,
+                        name: u.fullName,
                         subtitle: u.username,
                         isOnline: onlineUsers[u.id]
                     }}
@@ -204,9 +204,9 @@ const Sidebar = ({ onItemClick }) => {
                       {recentChats.map((chat) => (
                         <ConversationItem
                           key={`chat_${chat.id}`}
-                          item={{ 
-                            id: chat.id, 
-                            name: chat.fullName, 
+                          item={{
+                            id: chat.id,
+                            name: chat.fullName,
                             subtitle: chat.lastMessage?.content ? (chat.lastMessage.isMine ? `Bạn: ${chat.lastMessage.content}` : `${chat.fullName.split(' ').pop()}: ${chat.lastMessage.content}`) : 'Nhấn để chat',
                             isOnline: onlineUsers[chat.id]
                           }}
@@ -241,8 +241,8 @@ const Sidebar = ({ onItemClick }) => {
                       {groups.map((group) => (
                         <ConversationItem
                           key={`group_${group.id}`}
-                          item={{ 
-                            id: group.id, 
+                          item={{
+                            id: group.id,
                             name: group.name,
                             subtitle: group.lastMessage?.content ? `${group.lastMessage.senderName.split(' ').pop()}: ${group.lastMessage.content}` : 'Nhấn để chat',
                           }}

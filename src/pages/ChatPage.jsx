@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import ChatWindow from '../components/layout/ChatWindow';
 import Sidebar from '../components/layout/Sidebar';
 import socketService from '../services/socket.service';
@@ -17,6 +18,10 @@ const ChatPage = () => {
 
   return (
     <div className="h-screen overflow-hidden">
+      <Helmet>
+        <title>Tin nhắn | DVN Chat</title>
+        <meta name="description" content="Nhắn tin nhóm và trực tiếp tốc độ cao với DVN Chat." />
+      </Helmet>
       <div className="flex h-full bg-transparent">
         {/* Sidebar desktop */}
         <div className="hidden md:flex">

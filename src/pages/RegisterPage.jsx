@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { Link } from 'react-router-dom';
 import { z } from 'zod';
 import useAuthStore from '../stores/auth.store';
+
+import { Helmet } from 'react-helmet-async';
 
 const schema = z.object({
   username: z
@@ -46,11 +48,15 @@ const RegisterPage = () => {
 
   return (
   <div className="min-h-screen flex items-center justify-center px-4 sm:px-6">
+    <Helmet>
+      <title>Đăng ký | DVN Chat</title>
+      <meta name="description" content="Tạo tài khoản DVN Chat để bắt đầu nhắn tin với mọi người." />
+    </Helmet>
     <div className="w-full max-w-md glass-card p-6 sm:p-8 md:p-9">
       <div className="flex flex-col items-center mb-8">
         <img
           src="https://dvntechnology.com/assets/logo.png"
-          alt="DVN Chat"
+          alt="DVN"
           className="h-10 w-auto object-contain mb-4"
         />
         <div className="text-center">
