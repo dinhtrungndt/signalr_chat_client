@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import tokenStorage from '../utils/tokenStorage';
 import authApi from '../api/auth.api';
+import { registerPushSubscription } from '../utils/push';
 
 // Khóa localStorage (obfuscated)
 const STORAGE_KEY = btoa('dvn_chat_refresh_token');
@@ -41,6 +42,10 @@ const useAuthStore = create((set) => ({
     saveRefreshToken(refreshToken);
 
     set({ user, isAuthenticated: true });
+
+    // Đăng ký nhận thông báo nền (Web Push) sau khi đăng nhập thành công
+    setTimeout(() => registerPushSubscription(), 1000);
+
     return data;
   },
 
@@ -75,6 +80,9 @@ const useAuthStore = create((set) => ({
 
       const { data: meData } = await authApi.getMe();
       set({ user: meData.data, isAuthenticated: true, isLoading: false });
+
+      // Đảm bảo đã subscribe web push (trường hợp load lại trang)
+      setTimeout(() => registerPushSubscription(), 2000);
     } catch (err) {
       const status = err?.response?.status;
 

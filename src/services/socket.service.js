@@ -7,6 +7,15 @@ const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:1411';
 
 let socket = null;
 
+// Hàm phát âm thanh Ting (Pop nhẹ giống Messenger)
+const playNotificationSound = () => {
+  try {
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audio.volume = 0.5;
+    audio.play().catch(() => {}); // Catch lỗi nếu browser block auto-play
+  } catch (e) {}
+};
+
 const socketService = {
   // Kết nối Socket với Token xác thực
   connect: () => {
@@ -40,8 +49,14 @@ const socketService = {
 
     // Nhận tin nhắn Group
     socket.on('receiveGroupMessage', (message) => {
+      const myId = useAuthStore.getState().user?.id;
       addMessage('group', message.groupId, message);
       window.dispatchEvent(new Event('group_updated')); // Báo cho Sidebar cập nhật
+      
+      // Nếu không phải tin nhắn của mình gửi thì phát âm thanh
+      if (message.senderId !== myId) {
+        playNotificationSound();
+      }
     });
 
     // Nhận tin nhắn 1-1
@@ -50,6 +65,11 @@ const socketService = {
       const otherId = message.senderId === myId ? message.receiverId : message.senderId;
       addMessage('direct', otherId, message);
       window.dispatchEvent(new Event('chat_updated')); // Báo cho Sidebar cập nhật
+
+      // Nếu không phải tin nhắn của mình gửi thì phát âm thanh
+      if (message.senderId !== myId) {
+        playNotificationSound();
+      }
     });
 
     // Typing indicator
