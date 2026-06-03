@@ -13,6 +13,8 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
   
   const [activeTab, setActiveTab] = useState('members'); // 'members', 'add'
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
+  const [isSilentLeave, setIsSilentLeave] = useState(false);
 
   const { data: membersData, isLoading } = useQuery({
     queryKey: ['group-members', groupId],
@@ -74,11 +76,24 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
 
   // Xoá thành viên
   const removeMutation = useMutation({
-    mutationFn: (userId) => groupApi.removeUser(groupId, userId),
+    mutationFn: ({ userId, silent }) => groupApi.removeUser(groupId, userId, silent),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries(['group-members', groupId]);
-      if (variables === currentUser?.id) {
+      if (variables.userId === currentUser?.id) {
         queryClient.invalidateQueries(['my-groups']);
+      }
+    },
+  });
+
+  // Giải tán nhóm
+  const deleteGroupMutation = useMutation({
+    mutationFn: () => groupApi.deleteGroup(groupId),
+    onSuccess: () => {
+      onClose();
+      queryClient.invalidateQueries(['my-groups']);
+      const activeConversation = useChatStore.getState().activeConversation;
+      if (activeConversation?.type === 'group' && activeConversation?.id === groupId) {
+        useChatStore.getState().setActiveConversation(null);
       }
     },
   });
@@ -151,10 +166,12 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
                           {m.userId === currentUser?.id ? 'Bạn' : m.user.fullName}
                         </p>
                         {m.role === 'ADMIN' && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">ADMIN</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700">
+                            Trưởng nhóm
+                          </span>
                         )}
+                        <p className="text-xs text-slate-500 truncate">{m.user.username}</p>
                       </div>
-                      <p className="text-xs text-slate-500 truncate">{m.user.username}</p>
                     </div>
 
                     {/* Hành động (Chỉ Admin mới có quyền Kick, và không tự Kick chính mình) */}
@@ -162,13 +179,13 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
                       <button
                         onClick={() => {
                           if(window.confirm(`Xóa ${m.user.fullName} khỏi nhóm?`)) {
-                            removeMutation.mutate(m.userId);
+                            removeMutation.mutate({ userId: m.userId, silent: false });
                           }
                         }}
                         disabled={removeMutation.isLoading}
                         className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm transition disabled:opacity-50"
                       >
-                        Đuổi
+                        Kích
                       </button>
                     )}
                   </div>
@@ -234,22 +251,70 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100">
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+          {isAdmin && (
+            <button
+              onClick={() => {
+                if (window.confirm('CẢNH BÁO: Hành động này sẽ xoá toàn bộ tin nhắn và giải tán nhóm vĩnh viễn. Bạn có chắc chắn?')) {
+                  deleteGroupMutation.mutate();
+                }
+              }}
+              disabled={deleteGroupMutation.isLoading}
+              className="flex-1 py-2.5 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition disabled:opacity-50"
+            >
+              {deleteGroupMutation.isLoading ? 'Đang xử lý...' : 'Giải tán nhóm'}
+            </button>
+          )}
           <button
-            onClick={() => {
-              if(window.confirm('Bạn có chắc chắn muốn rời nhóm?')) {
-                removeMutation.mutate(currentUser.id, {
-                  onSuccess: () => {
-                    onClose();
-                  }
-                });
-              }
-            }}
-            className="w-full py-2.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition"
+            onClick={() => setIsLeaveConfirmOpen(true)}
+            className="flex-1 py-2.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition"
           >
             Rời nhóm
           </button>
         </div>
+
+        {/* Modal Xác nhận rời nhóm */}
+        {isLeaveConfirmOpen && (
+          <div className="absolute inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full p-5 shadow-xl">
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Rời khỏi nhóm</h3>
+              <p className="text-sm text-slate-500 mb-4">Bạn có chắc chắn muốn rời nhóm này không?</p>
+              
+              <label className="flex items-center gap-2 mb-5 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={isSilentLeave}
+                  onChange={(e) => setIsSilentLeave(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-slate-700">Rời nhóm trong im lặng</span>
+              </label>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setIsLeaveConfirmOpen(false)}
+                  className="flex-1 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+                >
+                  Huỷ
+                </button>
+                <button 
+                  onClick={() => {
+                    removeMutation.mutate({ userId: currentUser.id, silent: isSilentLeave }, {
+                      onSuccess: () => {
+                        setIsLeaveConfirmOpen(false);
+                        onClose();
+                      }
+                    });
+                  }}
+                  disabled={removeMutation.isLoading}
+                  className="flex-1 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-xl transition disabled:opacity-50"
+                >
+                  {removeMutation.isLoading ? 'Đang rời...' : 'Rời nhóm'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

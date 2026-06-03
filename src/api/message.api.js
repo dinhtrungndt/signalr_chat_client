@@ -6,6 +6,9 @@ const messageApi = {
 
   getDirectMessages: (userId, params) =>
     axiosClient.get(`/messages/direct/${userId}`, { params }),
+    
+  recallMessage: (messageId) =>
+    axiosClient.put(`/messages/${messageId}/recall`),
 };
 
 export default messageApi;

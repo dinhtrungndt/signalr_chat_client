@@ -50,6 +50,23 @@ const useChatStore = create((set, get) => ({
     }));
   },
 
+  // Cập nhật một tin nhắn cụ thể
+  updateMessage: (type, id, messageId, updates) => {
+    const key = `${type}_${id}`;
+    set((state) => {
+      const currentMessages = state.messages[key] || [];
+      const newMessages = currentMessages.map(m => 
+        m.id === messageId ? { ...m, ...updates } : m
+      );
+      return {
+        messages: {
+          ...state.messages,
+          [key]: newMessages
+        }
+      };
+    });
+  },
+
   // Lấy tin nhắn của cuộc trò chuyện hiện tại
   getMessages: (type, id) => {
     const key = `${type}_${id}`;

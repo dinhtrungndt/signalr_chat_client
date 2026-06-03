@@ -112,10 +112,18 @@ const Sidebar = ({ onItemClick }) => {
       if (activeTab === 'direct' && recentChats.length > 0) {
         setActiveConversation({ type: 'direct', id: recentChats[0].id, name: recentChats[0].fullName });
       } else if (activeTab === 'group' && groups.length > 0) {
-        setActiveConversation({ type: 'group', id: groups[0].id, name: groups[0].name });
+        setActiveConversation({ type: 'group', id: groups[0].id, name: groups[0].name, role: groups[0].role });
+      }
+    } else {
+      // Nếu nhóm đang mở không còn trong danh sách (bị đuổi, giải tán, tự rời) thì clear nó
+      if (activeConversation.type === 'group' && !isLoadingGroups) {
+        const stillExists = groups.some(g => g.id === activeConversation.id);
+        if (!stillExists) {
+          setActiveConversation(null);
+        }
       }
     }
-  }, [activeConversation, activeTab, recentChats, groups, setActiveConversation]);
+  }, [activeConversation, activeTab, recentChats, groups, isLoadingGroups, setActiveConversation]);
 
   // Gọi API Tìm kiếm (khi gõ phím)
   const { data: searchResultsData, isFetching: isSearching } = useQuery({
@@ -125,8 +133,8 @@ const Sidebar = ({ onItemClick }) => {
   });
   const searchResults = searchResultsData || [];
 
-  const handleSelectConversation = (type, id, name) => {
-    setActiveConversation({ type, id, name });
+  const handleSelectConversation = (type, id, name, role = null) => {
+    setActiveConversation({ type, id, name, role });
     setSearchQuery(''); // Xóa text tìm kiếm
     onItemClick?.();
   };
@@ -297,7 +305,7 @@ const Sidebar = ({ onItemClick }) => {
                               unreadCount: group.unreadCount || 0,
                             }}
                             isActive={activeConversation?.type === 'group' && activeConversation?.id === group.id}
-                            onClick={() => handleSelectConversation('group', group.id, group.name)}
+                            onClick={() => handleSelectConversation('group', group.id, group.name, group.role)}
                           />
                         );
                       })}

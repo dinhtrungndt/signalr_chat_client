@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import React, { useState, useEffect, useRef } from 'react';
@@ -17,8 +17,28 @@ const formatTime = (dateStr) => {
   }
 };
 
-const MessageItem = ({ message, isOwn, readers }) => (
-  <div className={`flex items-end gap-2 mb-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onImageClick }) => {
+  if (message.type === 'SYSTEM') {
+    let content = message.content;
+    let isSilent = false;
+    
+    if (content.startsWith('[SILENT_LEAVE]')) {
+      isSilent = true;
+      content = content.replace('[SILENT_LEAVE]', '');
+      if (!isAdmin) return null; // Ẩn hoàn toàn với Member
+    }
+
+    return (
+      <div className="flex justify-center w-full my-4">
+        <span className="text-xs font-medium bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full text-center max-w-[85%] break-words">
+          {content} {isSilent && <span className="ml-1 opacity-70 italic">(Âm thầm)</span>}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex items-end gap-2 mb-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
     {/* Avatar người gửi (chỉ hiện khi không phải mình) */}
     {!isOwn && (
       <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
@@ -26,7 +46,40 @@ const MessageItem = ({ message, isOwn, readers }) => (
       </div>
     )}
 
-    <div className="max-w-[78%] sm:max-w-[70%] group">
+    <div className="max-w-[78%] sm:max-w-[70%] group relative" id={`msg-${message.id}`}>
+      {/* Nút Hành Động (hiển thị khi hover) */}
+      <div className={`absolute top-1/2 -translate-y-1/2 ${isOwn ? '-left-16' : '-right-8'} opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1`}>
+        {/* Nút Trả Lời (hiện cho mọi tin nhắn chưa thu hồi) */}
+        {message.type !== 'RECALLED' && (
+          <button
+            onClick={() => onReply(message)}
+            className="p-1 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-full"
+            title="Trả lời"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+          </button>
+        )}
+        
+        {/* Nút Thu Hồi (chỉ cho tin nhắn của mình) */}
+        {isOwn && message.type !== 'RECALLED' && (
+          <button
+            onClick={() => {
+              if (window.confirm('Bạn có chắc chắn muốn thu hồi tin nhắn này?')) {
+                messageApi.recallMessage(message.id).catch(console.error);
+              }
+            }}
+            className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full"
+            title="Thu hồi tin nhắn"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        )}
+      </div>
+
       {/* Tên người gửi (chỉ hiện với group chat, không phải mình) */}
       {!isOwn && message.groupId && (
         <p className="text-xs text-slate-500 mb-1 ml-1">{message.sender?.fullName}</p>
@@ -34,20 +87,67 @@ const MessageItem = ({ message, isOwn, readers }) => (
 
       <div
         className={[
-          message.type === 'IMAGE' ? 'p-0.5 bg-transparent border border-slate-200' : 'px-4 py-2.5',
+          message.type === 'IMAGE' ? 'bg-transparent' : 
+          message.type === 'RECALLED' ? 'px-4 py-2.5 bg-slate-50 border border-slate-200 border-dashed text-slate-400 italic' : 'px-4 py-2.5',
           'rounded-2xl text-sm leading-relaxed break-words',
-          isOwn ? 'msg-mine rounded-br-sm' : 'msg-other rounded-bl-sm',
+          message.type === 'RECALLED' ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') : 
+          message.type === 'IMAGE' ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') :
+          (isOwn ? 'msg-mine rounded-br-sm' : 'msg-other rounded-bl-sm'),
         ].join(' ')}
       >
-        {message.type === 'TEXT' && message.content}
-        {message.type === 'IMAGE' && (
-          <img 
-            src={`http://localhost:1411${message.content}`} 
-            alt="Image" 
-            className="max-w-xs sm:max-w-sm rounded-xl object-contain cursor-pointer max-h-64"
-            onClick={() => window.open(`http://localhost:1411${message.content}`, '_blank')}
-          />
+        {/* Nếu có reply, hiển thị khối reply ở trên cùng */}
+        {message.replyTo && (
+          <div 
+            onClick={() => {
+              const el = document.getElementById(`msg-${message.replyToId}`);
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('bg-indigo-100', 'transition-colors', 'duration-1000');
+                setTimeout(() => el.classList.remove('bg-indigo-100'), 1500);
+              }
+            }}
+            className="mb-2 p-2 rounded-lg bg-black/10 cursor-pointer hover:bg-black/20 transition-colors border-l-4 border-indigo-500/50"
+          >
+            <p className="text-[10px] font-semibold opacity-70 mb-0.5">
+              {message.replyTo.sender?.fullName}
+            </p>
+            <p className="text-xs opacity-90 truncate max-w-[200px] sm:max-w-[250px]">
+              {message.replyTo.type === 'TEXT' ? message.replyTo.content : (message.replyTo.type === 'IMAGE' ? '[Hình ảnh]' : '[Tập tin]')}
+            </p>
+          </div>
         )}
+
+        {message.type === 'TEXT' && message.content}
+        {message.type === 'RECALLED' && message.content}
+        {message.type === 'IMAGE' && (() => {
+          const urls = message.content.split('|');
+          if (urls.length === 1) {
+            return (
+              <img 
+                src={`http://localhost:1411${urls[0]}`} 
+                alt="Image" 
+                className="max-w-xs sm:max-w-sm rounded-xl object-contain cursor-pointer max-h-64"
+                onClick={() => onImageClick(`http://localhost:1411${urls[0]}`)}
+              />
+            );
+          } else {
+            // Album layout (Grid)
+            const gridCols = urls.length === 2 ? 'grid-cols-2' : 'grid-cols-3';
+            return (
+              <div className={`grid gap-1 ${gridCols} max-w-[260px] sm:max-w-xs overflow-hidden rounded-2xl ${isOwn ? 'rounded-br-sm' : 'rounded-bl-sm'} border border-slate-200/50`}>
+                {urls.map((url, idx) => (
+                  <img
+                    key={idx}
+                    src={`http://localhost:1411${url}`}
+                    alt="Image"
+                    className="w-full aspect-square object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => onImageClick(`http://localhost:1411${url}`)}
+                  />
+                ))}
+              </div>
+            );
+          }
+        })()}
         {message.type === 'FILE' && (
           <a 
             href={`http://localhost:1411${message.content}`}
@@ -86,8 +186,9 @@ const MessageItem = ({ message, isOwn, readers }) => (
         </div>
       )}
     </div>
-  </div>
-);
+    </div>
+  );
+};
 
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
@@ -110,10 +211,14 @@ const ChatWindow = ({ onOpenSidebar }) => {
   const [isSending, setIsSending] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isGroupMembersModalOpen, setIsGroupMembersModalOpen] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [previewImage, setPreviewImage] = useState(null);
   const messagesEndRef = useRef(null);
   const typingTimerRef = useRef(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
+  const queryClient = useQueryClient();
 
   // Fetch lịch sử tin nhắn từ API
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
@@ -139,6 +244,16 @@ const ChatWindow = ({ onOpenSidebar }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
+  // Lắng nghe sự kiện thu hồi tin nhắn để cập nhật query cache
+  useEffect(() => {
+    const handleMessageRecalled = () => {
+      // Khi có tin nhắn bị thu hồi, ta xoá cache query để nếu scroll up nó sẽ lấy đúng dữ liệu mới
+      queryClient.invalidateQueries(['messages', conversationKey]);
+    };
+    window.addEventListener('message_recalled', handleMessageRecalled);
+    return () => window.removeEventListener('message_recalled', handleMessageRecalled);
+  }, [conversationKey]);
+
   // Auto scroll xuống khi có tin mới
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -157,58 +272,108 @@ const ChatWindow = ({ onOpenSidebar }) => {
   }, [messages.length, activeConversation]);
 
   // Gửi tin nhắn
-  // Gửi tin nhắn
   const handleSend = async () => {
     const content = inputText.trim();
-    if (!content || isSending) return;
+    if ((!content && pendingFiles.length === 0) || isSending) return;
 
-    setInputText('');
     setIsSending(true);
+    
+    const replyToId = replyingTo ? replyingTo.id : null;
 
     try {
-      if (activeConversation.type === 'group') {
-        await socketService.sendGroupMessage(activeConversation.id, content);
-      } else {
-        const msg = await socketService.sendDirectMessage(activeConversation.id, content);
-        addMessage('direct', activeConversation.id, msg);
+      // 1. Gửi tin nhắn Text trước (nếu có)
+      if (content) {
+        if (activeConversation.type === 'group') {
+          await socketService.sendGroupMessage(activeConversation.id, content, 'TEXT', replyToId);
+        } else {
+          const msg = await socketService.sendDirectMessage(activeConversation.id, content, 'TEXT', replyToId);
+          addMessage('direct', activeConversation.id, msg);
+        }
       }
+
+      // 2. Gửi file trong hàng chờ
+      if (pendingFiles.length > 0) {
+        setIsUploading(true);
+        
+        const imageFiles = pendingFiles.filter(f => f.file.type.startsWith('image/'));
+        const otherFiles = pendingFiles.filter(f => !f.file.type.startsWith('image/'));
+
+        // Xử lý ảnh: Gộp chung thành 1 chuỗi URL ngăn cách bởi '|'
+        if (imageFiles.length > 0) {
+          const imageUrls = [];
+          for (const pendingFile of imageFiles) {
+            const res = await uploadApi.uploadFile(pendingFile.file);
+            imageUrls.push(res.data.data.url);
+          }
+          const combinedUrl = imageUrls.join('|');
+          
+          if (activeConversation.type === 'group') {
+            await socketService.sendGroupMessage(activeConversation.id, combinedUrl, 'IMAGE', replyToId);
+          } else {
+            const msg = await socketService.sendDirectMessage(activeConversation.id, combinedUrl, 'IMAGE', replyToId);
+            addMessage('direct', activeConversation.id, msg);
+          }
+        }
+
+        // Xử lý file khác: Mỗi file 1 tin nhắn rời
+        for (const pendingFile of otherFiles) {
+          const res = await uploadApi.uploadFile(pendingFile.file);
+          const fileData = res.data.data;
+          
+          if (activeConversation.type === 'group') {
+            await socketService.sendGroupMessage(activeConversation.id, fileData.url, 'FILE', replyToId);
+          } else {
+            const msg = await socketService.sendDirectMessage(activeConversation.id, fileData.url, 'FILE', replyToId);
+            addMessage('direct', activeConversation.id, msg);
+          }
+        }
+
+        setIsUploading(false);
+      }
+
+      // 3. Reset mọi thứ sau khi gửi thành công
+      setInputText('');
+      setPendingFiles([]);
+      setReplyingTo(null);
     } catch (err) {
-      console.error('Gửi tin nhắn thất bại:', err);
+      console.error('Gửi tin nhắn/file thất bại:', err);
+      alert('Gửi tin nhắn hoặc file thất bại. Vui lòng thử lại!');
     } finally {
       setIsSending(false);
     }
   };
 
-  // Xử lý Upload
-  const handleFileUpload = async (e, isImageOnly = false) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  // Xử lý đưa file vào hàng chờ
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
 
-    if (file.size > 20 * 1024 * 1024) {
-      alert('Kích thước file không được vượt quá 20MB!');
-      e.target.value = '';
-      return;
-    }
-
-    try {
-      setIsUploading(true);
-      const res = await uploadApi.uploadFile(file);
-      const fileData = res.data.data;
-      
-      const isImage = fileData.mimetype.startsWith('image/');
-      
-      if (activeConversation.type === 'group') {
-        await socketService.sendGroupMessage(activeConversation.id, fileData.url, isImage ? 'IMAGE' : 'FILE');
-      } else {
-        const msg = await socketService.sendDirectMessage(activeConversation.id, fileData.url, isImage ? 'IMAGE' : 'FILE');
-        addMessage('direct', activeConversation.id, msg);
+    const newPendingFiles = files.map(file => {
+      if (file.size > 20 * 1024 * 1024) {
+        alert(`File ${file.name} vượt quá 20MB!`);
+        return null;
       }
-    } catch (error) {
-      alert(error.response?.data?.message || 'Lỗi khi upload file');
-    } finally {
-      setIsUploading(false);
-      e.target.value = '';
-    }
+      return {
+        id: Math.random().toString(36).substr(2, 9),
+        file,
+        previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+      };
+    }).filter(f => f !== null);
+
+    setPendingFiles(prev => [...prev, ...newPendingFiles]);
+    e.target.value = '';
+  };
+
+  const removePendingFile = (id) => {
+    setPendingFiles(prev => {
+      const filtered = prev.filter(f => f.id !== id);
+      // Thu hồi blob url để tránh leak memory
+      const fileToRemove = prev.find(f => f.id === id);
+      if (fileToRemove?.previewUrl) {
+        URL.revokeObjectURL(fileToRemove.previewUrl);
+      }
+      return filtered;
+    });
   };
 
   // Xử lý typing indicator
@@ -314,7 +479,7 @@ const ChatWindow = ({ onOpenSidebar }) => {
             .filter(([uid, uData]) => uid !== String(currentUser?.id) && String(uData.lastReadMessageId) === String(msg.id))
             .map(([uid, uData]) => uData);
 
-          return <MessageItem key={msg.id} message={msg} isOwn={msg.senderId === currentUser?.id} readers={readers} />;
+          return <MessageItem key={msg.id} message={msg} isOwn={msg.senderId === currentUser?.id} readers={readers} isAdmin={activeConversation?.role === 'ADMIN'} onReply={setReplyingTo} onImageClick={setPreviewImage} />;
         })}
 
         {/* Typing indicator */}
@@ -352,8 +517,9 @@ const ChatWindow = ({ onOpenSidebar }) => {
             type="file" 
             ref={imageInputRef} 
             hidden 
+            multiple
             accept="image/*" 
-            onChange={(e) => handleFileUpload(e, true)}
+            onChange={handleFileSelect}
           />
 
           {/* Nút Upload Tệp */}
@@ -372,22 +538,75 @@ const ChatWindow = ({ onOpenSidebar }) => {
             type="file" 
             ref={fileInputRef} 
             hidden 
+            multiple
             accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt" 
-            onChange={(e) => handleFileUpload(e, false)}
+            onChange={handleFileSelect}
           />
 
-          <textarea
-            value={inputText}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            rows={1}
-            placeholder={`Nhắn tin ${activeConversation.type === 'group' ? 'nhóm' : activeConversation.name}...`}
-            className="flex-1 input-field resize-none min-h-[44px] max-h-32 py-3 leading-5"
-          />
+          <div className="flex-1 flex flex-col min-w-0 bg-slate-50 border border-slate-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200 focus-within:bg-white rounded-2xl transition-all duration-200">
+            {/* Thanh Preview File Hàng Chờ */}
+            {pendingFiles.length > 0 && (
+              <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-slate-200 overflow-x-auto custom-scrollbar">
+                {pendingFiles.map(pf => (
+                  <div key={pf.id} className="relative flex-shrink-0 group">
+                    {pf.previewUrl ? (
+                      <img src={pf.previewUrl} alt="preview" className="w-12 h-12 rounded-lg object-cover border border-slate-200" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removePendingFile(pf.id)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 shadow-sm opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Thanh Preview Trả Lời */}
+            {replyingTo && (
+              <div className="flex items-start justify-between px-4 pt-3 pb-2 border-b border-slate-200">
+                <div className="flex flex-col min-w-0 pr-2">
+                  <span className="text-[11px] font-semibold text-indigo-600 mb-0.5">
+                    Đang trả lời {replyingTo.sender?.fullName}
+                  </span>
+                  <span className="text-xs text-slate-500 truncate">
+                    {replyingTo.type === 'TEXT' ? replyingTo.content : (replyingTo.type === 'IMAGE' ? '[Hình ảnh]' : '[Tập tin]')}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReplyingTo(null)}
+                  className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            <textarea
+              value={inputText}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              placeholder={`Nhắn tin ${activeConversation.type === 'group' ? 'nhóm' : activeConversation.name}...`}
+              className="w-full resize-none bg-transparent border-none focus:ring-0 px-4 py-3 min-h-[44px] max-h-32 text-sm leading-5 placeholder-slate-400"
+            />
+          </div>
 
           <button
             onClick={handleSend}
-            disabled={!inputText.trim() || isSending}
+            disabled={(!inputText.trim() && pendingFiles.length === 0) || isSending}
             className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl
               bg-gradient-to-r from-indigo-600 to-sky-500
               hover:from-indigo-500 hover:to-sky-400
@@ -410,7 +629,7 @@ const ChatWindow = ({ onOpenSidebar }) => {
         <p className="text-[10px] text-slate-400 mt-1.5 ml-1">Enter để gửi · Shift+Enter xuống dòng</p>
       </div>
 
-      {/* Render Modal */}
+      {/* Render Modal Xem Thành Viên */}
       {activeConversation.type === 'group' && (
         <GroupMembersModal
           isOpen={isGroupMembersModalOpen}
@@ -418,6 +637,32 @@ const ChatWindow = ({ onOpenSidebar }) => {
           groupId={activeConversation.id}
           groupName={activeConversation.name}
         />
+      )}
+
+      {/* Render Modal Xem Ảnh Phóng To */}
+      {previewImage && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-5xl max-h-screen w-full h-full flex items-center justify-center p-4 sm:p-8">
+            <button 
+              className="absolute top-4 right-4 sm:top-8 sm:right-8 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition backdrop-blur-md"
+              onClick={() => setPreviewImage(null)}
+              title="Đóng (Esc)"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <img 
+              src={previewImage} 
+              alt="Preview" 
+              className="max-w-full max-h-full object-contain drop-shadow-2xl rounded-sm"
+              onClick={(e) => e.stopPropagation()} 
+            />
+          </div>
+        </div>
       )}
     </div>
   );

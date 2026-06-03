@@ -1,7 +1,7 @@
 import io from 'socket.io-client';
-import tokenStorage from '../utils/tokenStorage';
-import useChatStore from '../stores/chat.store';
 import useAuthStore from '../stores/auth.store';
+import useChatStore from '../stores/chat.store';
+import tokenStorage from '../utils/tokenStorage';
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:1411';
 
@@ -76,13 +76,13 @@ const socketService = {
     socket.on('removedFromGroup', ({ groupId }) => {
       // Báo server rời phòng này
       socket.emit('leaveGroupRoom', groupId);
-      
+
       // Xoá cuộc hội thoại hiện tại nếu đang mở nhóm đó
       const activeConversation = useChatStore.getState().activeConversation;
       if (activeConversation?.type === 'group' && activeConversation?.id === groupId) {
         useChatStore.getState().setActiveConversation(null);
       }
-      
+
       // Báo UI tải lại danh sách nhóm
       window.dispatchEvent(new Event('group_updated'));
     });
@@ -95,13 +95,37 @@ const socketService = {
       window.dispatchEvent(new CustomEvent('group_members_updated', { detail: { groupId } }));
     });
 
+    socket.on('group_disbanded', ({ groupId }) => {
+      socket.emit('leaveGroupRoom', groupId);
+
+      const activeConversation = useChatStore.getState().activeConversation;
+      if (activeConversation?.type === 'group' && activeConversation?.id === groupId) {
+        useChatStore.getState().setActiveConversation(null);
+      }
+
+      window.dispatchEvent(new Event('group_updated'));
+    });
+
+    // ==========================================
+    // SỰ KIỆN THU HỒI TIN NHẮN
+    // ==========================================
+    socket.on('message_recalled', (data) => {
+      // data = { messageId, groupId, partnerId }
+      if (data.groupId) {
+        useChatStore.getState().updateMessage('group', data.groupId, data.messageId, { type: 'RECALLED', content: 'Tin nhắn đã được thu hồi' });
+      } else if (data.partnerId) {
+        useChatStore.getState().updateMessage('direct', data.partnerId, data.messageId, { type: 'RECALLED', content: 'Tin nhắn đã được thu hồi' });
+      }
+      window.dispatchEvent(new CustomEvent('message_recalled', { detail: data }));
+    });
+
     // ==========================================
     // SỰ KIỆN ĐÃ ĐỌC (WATERMARK)
     // ==========================================
     socket.on('message_read', (data) => {
       const { groupId, partnerId, lastReadMessageId, user } = data;
       const { setWatermark } = useChatStore.getState();
-      
+
       if (groupId) {
         setWatermark('group', groupId, user, lastReadMessageId);
       } else if (partnerId) {
@@ -127,9 +151,9 @@ const socketService = {
   },
 
   // Gửi tin nhắn Group
-  sendGroupMessage: (groupId, content, type = 'TEXT') => {
+  sendGroupMessage: (groupId, content, type = 'TEXT', replyToId = null) => {
     return new Promise((resolve, reject) => {
-      socket?.emit('sendGroupMessage', { groupId, content, type }, (res) => {
+      socket?.emit('sendGroupMessage', { groupId, content, type, replyToId }, (res) => {
         if (res.success) {
           resolve(res.data);
           window.dispatchEvent(new Event('group_updated')); // Báo cho Sidebar cập nhật
@@ -140,9 +164,9 @@ const socketService = {
   },
 
   // Gửi tin nhắn 1-1
-  sendDirectMessage: (receiverId, content, type = 'TEXT') => {
+  sendDirectMessage: (receiverId, content, type = 'TEXT', replyToId = null) => {
     return new Promise((resolve, reject) => {
-      socket?.emit('sendDirectMessage', { receiverId, content, type }, (res) => {
+      socket?.emit('sendDirectMessage', { receiverId, content, type, replyToId }, (res) => {
         if (res.success) {
           resolve(res.data);
           window.dispatchEvent(new Event('chat_updated')); // Báo cho Sidebar cập nhật
