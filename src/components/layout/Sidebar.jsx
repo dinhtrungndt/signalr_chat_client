@@ -22,6 +22,7 @@ const getSubtitle = (lastMessage, prefix) => {
   let text = lastMessage.content;
   if (lastMessage.type === 'IMAGE') text = 'Đã gửi một hình ảnh';
   if (lastMessage.type === 'FILE') text = 'Đã gửi một tệp đính kèm';
+  if (lastMessage.type === 'AUDIO') text = 'Đã gửi một tin nhắn thoại';
   return prefix ? `${prefix}: ${text}` : text;
 };
 
