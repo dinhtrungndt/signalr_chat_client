@@ -117,7 +117,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
               </svg>
             </button>
             {/* Glassmorphism Reaction Picker (đã đổi sang bottom-full để bật lên trên) */}
-            <div className={`absolute bottom-full ${isOwn ? 'right-0' : 'left-0'} pb-1 hidden group-hover/react:block z-50 animate-fade-in-up`}>
+            <div className="absolute bottom-full right-0 pb-1 hidden group-hover/react:block z-50 animate-fade-in-up w-max">
               <div className="flex items-center gap-1 p-1.5 bg-white/80 backdrop-blur-md border border-slate-200/60 shadow-xl rounded-full">
                 {EMOJIS.map(emoji => (
                   <button
@@ -602,9 +602,9 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
           title={activeConversation.type === 'direct' ? "Xem trang cá nhân" : "Xem thành viên nhóm"}
         >
           {activeConversation.avatar ? (
-            <img src={`${process.env.REACT_APP_SOCKET_URL}${activeConversation.avatar}`} alt="Avatar" className="w-9 h-9 rounded-full object-cover" />
+            <img src={`${process.env.REACT_APP_SOCKET_URL}${activeConversation.avatar}`} alt="Avatar" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
           ) : (
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm">
+            <div className="w-9 h-9 flex-shrink-0 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm">
               {activeConversation.name?.charAt(0)?.toUpperCase() || '?'}
             </div>
           )}
@@ -720,7 +720,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       )}
 
       {/* Vùng tin nhắn */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-4">
         {/* Nút tải thêm tin cũ */}
         {hasNextPage && (
           <div className="flex justify-center mb-4">
