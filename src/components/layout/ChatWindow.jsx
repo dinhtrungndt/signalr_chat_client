@@ -174,10 +174,10 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
           if (urls.length === 1) {
             return (
               <img 
-                src={`http://localhost:1411${urls[0]}`} 
+                src={`${process.env.REACT_APP_SOCKET_URL}${urls[0]}`} 
                 alt="Image" 
                 className="max-w-xs sm:max-w-sm rounded-xl object-contain cursor-pointer max-h-64"
-                onClick={() => onImageClick(`http://localhost:1411${urls[0]}`)}
+                onClick={() => onImageClick(`${process.env.REACT_APP_SOCKET_URL}${urls[0]}`)}
               />
             );
           } else {
@@ -188,10 +188,10 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
                 {urls.map((url, idx) => (
                   <img
                     key={idx}
-                    src={`http://localhost:1411${url}`}
+                    src={`${process.env.REACT_APP_SOCKET_URL}${url}`}
                     alt="Image"
                     className="w-full aspect-square object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => onImageClick(`http://localhost:1411${url}`)}
+                    onClick={() => onImageClick(`${process.env.REACT_APP_SOCKET_URL}${url}`)}
                   />
                 ))}
               </div>
@@ -200,7 +200,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
         })()}
         {message.type === 'FILE' && (
           <a 
-            href={`http://localhost:1411${message.content}`}
+            href={`${process.env.REACT_APP_SOCKET_URL}${message.content}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 underline"
@@ -213,7 +213,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
         )}
         {message.type === 'AUDIO' && (
           <WaveformPlayer 
-            audioUrl={`http://localhost:1411${message.content}`} 
+            audioUrl={`${process.env.REACT_APP_SOCKET_URL}${message.content}`} 
             isOwn={isOwn} 
           />
         )}
