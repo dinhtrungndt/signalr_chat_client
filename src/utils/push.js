@@ -16,11 +16,16 @@ const urlBase64ToUint8Array = (base64String) => {
 };
 
 // Khóa VAPID Public Key - Phải giống hệt với khóa ở Backend
-const PUBLIC_VAPID_KEY = process.env.REACT_APP_VAPID_PUBLIC_KEY || 'BEl62iN...'; 
+const PUBLIC_VAPID_KEY = process.env.REACT_APP_VAPID_PUBLIC_KEY || '';
 
 export const registerPushSubscription = async () => {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     console.warn('Web Push không được hỗ trợ trên trình duyệt này');
+    return;
+  }
+
+  if (!PUBLIC_VAPID_KEY || PUBLIC_VAPID_KEY.includes('...')) {
+    console.warn('VAPID public key chưa được cấu hình. Cần khởi động lại React App (npm start) để nhận biến môi trường mới.');
     return;
   }
 

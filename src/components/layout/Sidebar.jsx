@@ -43,8 +43,11 @@ const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClick }) =>
 
   return (
     <div className="relative group">
-      <button
+      <div
         onClick={onClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if(e.key === 'Enter') onClick(); }}
         className={[
           'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left',
           'transition-all duration-150 border',
@@ -126,7 +129,7 @@ const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClick }) =>
             )}
           </div>
         )}
-      </button>
+      </div>
     </div>
   );
 };

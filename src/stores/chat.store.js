@@ -72,6 +72,33 @@ const useChatStore = create((set, get) => ({
     });
   },
 
+  // Cập nhật Cảm xúc (Reactions) của một tin nhắn
+  updateMessageReactions: (type, id, messageId, action, reaction) => {
+    const key = `${type}_${id}`;
+    set((state) => {
+      const msgs = state.messages[key] || [];
+      const index = msgs.findIndex((m) => m.id === String(messageId));
+      if (index === -1) return state;
+
+      const newMsgs = [...msgs];
+      const msg = newMsgs[index];
+      let newReactions = [...(msg.reactions || [])];
+
+      if (action === 'added') {
+        newReactions.push(reaction);
+      } else if (action === 'updated') {
+        const rIndex = newReactions.findIndex(r => r.userId === reaction.userId);
+        if (rIndex !== -1) newReactions[rIndex] = reaction;
+        else newReactions.push(reaction);
+      } else if (action === 'removed') {
+        newReactions = newReactions.filter(r => r.userId !== reaction.userId);
+      }
+
+      newMsgs[index] = { ...msg, reactions: newReactions };
+      return { messages: { ...state.messages, [key]: newMsgs } };
+    });
+  },
+
   // === Pinned Messages ===
   setPinnedMessages: (type, id, pins) => {
     const key = `${type}_${id}`;

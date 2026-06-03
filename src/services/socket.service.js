@@ -194,6 +194,24 @@ const socketService = {
     });
 
     // ==========================================
+    // SỰ KIỆN THẢ CẢM XÚC TIN NHẮN
+    // ==========================================
+    socket.on('message_reacted', (data) => {
+      // data = { messageId, groupId, receiverId, action, reaction }
+      const { messageId, groupId, receiverId, action, reaction } = data;
+      
+      const type = groupId ? 'group' : 'direct';
+      let id = groupId;
+      if (!groupId) {
+        // Chat 1-1: Nếu receiverId là mình thì id hội thoại là người gửi (reaction.userId), ngược lại là receiverId
+        const myId = useAuthStore.getState().user?.id;
+        id = (receiverId === myId) ? reaction.userId : receiverId;
+      }
+
+      useChatStore.getState().updateMessageReactions(type, id, messageId, action, reaction);
+    });
+
+    // ==========================================
     // SỰ KIỆN ĐÃ ĐỌC (WATERMARK)
     // ==========================================
     socket.on('message_read', (data) => {
@@ -273,6 +291,16 @@ const socketService = {
 
   sendStopTyping: (groupId, receiverId) => {
     socket?.emit('stopTyping', { groupId, receiverId });
+  },
+
+  // Thả cảm xúc
+  reactMessage: (messageId, groupId, receiverId, emoji) => {
+    return new Promise((resolve, reject) => {
+      socket?.emit('react_message', { messageId, groupId, receiverId, emoji }, (res) => {
+        if (res.success) resolve(res.data);
+        else reject(new Error(res.error));
+      });
+    });
   },
 
   getSocket: () => socket,

@@ -3,6 +3,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import React, { useState, useEffect, useRef } from 'react';
 import GroupMembersModal from './GroupMembersModal';
+import ReactionListModal from './ReactionListModal';
 import messageApi from '../../api/message.api';
 import uploadApi from '../../api/upload.api';
 import socketService from '../../services/socket.service';
@@ -17,7 +18,9 @@ const formatTime = (dateStr) => {
   }
 };
 
-const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImageClick, isFirstInGroup = true, isLastInGroup = true }) => {
+const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
+
+const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImageClick, onReact, onShowReactions, isFirstInGroup = true, isLastInGroup = true }) => {
   if (message.type === 'SYSTEM') {
     let content = message.content;
     let isSilent = false;
@@ -52,7 +55,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
 
     <div className="max-w-[78%] sm:max-w-[70%] group relative" id={`msg-${message.id}`}>
       {/* Nút Hành Động (hiển thị khi hover) */}
-      <div className={`absolute top-1/2 -translate-y-1/2 ${isOwn ? '-left-16' : '-right-8'} opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1`}>
+      <div className={`absolute top-1/2 -translate-y-1/2 ${isOwn ? 'right-full mr-2' : 'left-full ml-2'} opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 z-20`}>
         {/* Nút Trả Lời (hiện cho mọi tin nhắn chưa thu hồi) */}
         {message.type !== 'RECALLED' && (
           <button
@@ -94,6 +97,34 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
           </button>
+        )}
+        {/* Nút Thả cảm xúc */}
+        {message.type !== 'RECALLED' && (
+          <div className="relative group/react">
+            <button
+              className="p-1 text-slate-400 hover:text-pink-500 hover:bg-pink-50 rounded-full"
+              title="Thả cảm xúc"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+            {/* Glassmorphism Reaction Picker (đã đổi sang bottom-full để bật lên trên) */}
+            <div className={`absolute bottom-full ${isOwn ? 'right-0' : 'left-0'} pb-1 hidden group-hover/react:block z-50 animate-fade-in-up`}>
+              <div className="flex items-center gap-1 p-1.5 bg-white/80 backdrop-blur-md border border-slate-200/60 shadow-xl rounded-full">
+                {EMOJIS.map(emoji => (
+                  <button
+                    key={emoji}
+                    onClick={() => onReact(message, emoji)}
+                    className="w-8 h-8 flex items-center justify-center text-xl hover:scale-125 hover:-translate-y-1 transition-transform cursor-pointer"
+                    title={emoji}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
@@ -180,6 +211,22 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
         )}
       </div>
 
+      {/* Hiển thị danh sách Cảm xúc đã thả */}
+      {message.reactions && message.reactions.length > 0 && (
+        <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end mr-1' : 'justify-start ml-1'}`}>
+          <div 
+            onClick={() => onShowReactions(message.reactions)}
+            className="flex items-center px-1.5 py-0.5 bg-white shadow-sm border border-slate-100 rounded-full cursor-pointer hover:bg-slate-50 transition"
+          >
+            {/* Lọc ra các emoji unique để hiển thị */}
+            {[...new Set(message.reactions.map(r => r.emoji))].slice(0, 3).map((emoji, idx) => (
+              <span key={idx} className="text-[11px] leading-none -ml-0.5 first:ml-0">{emoji}</span>
+            ))}
+            <span className="text-[10px] font-semibold text-slate-500 ml-1">{message.reactions.length}</span>
+          </div>
+        </div>
+      )}
+
       {isLastInGroup && (
         <p
           className={[
@@ -238,6 +285,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [replyingTo, setReplyingTo] = useState(null);
   const [pendingFiles, setPendingFiles] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
+  const [reactionsToShow, setReactionsToShow] = useState(null);
   const messagesEndRef = useRef(null);
   const typingTimerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -313,9 +361,26 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
     return () => window.removeEventListener('message_recalled', handleMessageRecalled);
   }, [conversationKey]);
 
-  // Auto scroll xuống khi có tin mới
+  // Trạng thái lưu lại tin nhắn cũ để so sánh
+  const previousMessagesLengthRef = useRef(messages.length);
+  const previousConversationIdRef = useRef(activeConversation?.id);
+
+  // Auto scroll xuống
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!messagesEndRef.current) return;
+
+    // Nếu đổi hội thoại, scroll tức thì (auto). Nếu có tin nhắn mới (length tăng), scroll mượt (smooth).
+    const isNewConversation = previousConversationIdRef.current !== activeConversation?.id;
+    const isNewMessage = messages.length > previousMessagesLengthRef.current;
+    
+    if (isNewConversation) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+    } else if (isNewMessage) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    previousConversationIdRef.current = activeConversation?.id;
+    previousMessagesLengthRef.current = messages.length;
     
     // Đánh dấu đã đọc khi có tin nhắn mới hoặc mới mở chat
     if (messages.length > 0 && activeConversation) {
@@ -519,6 +584,13 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
         groupId={activeConversation.type === 'group' ? activeConversation.id : null}
       />
 
+      {/* Reaction List Modal */}
+      <ReactionListModal
+        isOpen={!!reactionsToShow}
+        onClose={() => setReactionsToShow(null)}
+        reactions={reactionsToShow}
+      />
+
       {/* Pinned Header */}
       {pinnedMessages && pinnedMessages.length > 0 && (
         <div className="relative">
@@ -633,6 +705,15 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
               onReply={setReplyingTo} 
               onPin={handlePinMessage} 
               onImageClick={setPreviewImage} 
+              onShowReactions={setReactionsToShow}
+              onReact={(message, emoji) => {
+                socketService.reactMessage(
+                  message.id,
+                  activeConversation.type === 'group' ? activeConversation.id : null,
+                  activeConversation.type === 'direct' ? activeConversation.id : null,
+                  emoji
+                );
+              }}
               isFirstInGroup={isFirstInGroup}
               isLastInGroup={isLastInGroup}
             />
