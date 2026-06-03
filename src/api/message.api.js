@@ -15,6 +15,16 @@ const messageApi = {
     
   searchMessages: (params) =>
     axiosClient.get('/messages/search', { params }),
+    
+  // Pinned Messages
+  getPinnedMessages: (params) => 
+    axiosClient.get('/messages/pins', { params }),
+    
+  pinMessage: (messageId, data) => 
+    axiosClient.post(`/messages/pins/${messageId}`, data),
+    
+  unpinMessage: (messageId) => 
+    axiosClient.delete(`/messages/pins/${messageId}`),
 };
 
 export default messageApi;

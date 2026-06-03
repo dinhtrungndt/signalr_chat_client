@@ -51,7 +51,7 @@ return (
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Tên đăng nhập</label>
-          <input {...register('username')} className="input-field" placeholder="vd: dinhtrungndt" autoComplete="username" />
+          <input {...register('username')} className="input-field" placeholder="vd: taikhoancuaban" autoComplete="username" />
           {errors.username && <p className="text-red-600 text-xs mt-1.5">{errors.username.message}</p>}
         </div>
 

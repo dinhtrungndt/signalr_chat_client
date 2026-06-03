@@ -7,6 +7,7 @@ const useChatStore = create((set, get) => ({
   onlineUsers: {}, // { [userId]: boolean } // Trạng thái online của user
   userLastSeen: {}, // { [userId]: Date string }
   watermarks: {}, // { "group_2": { "userId": lastReadMessageId } } // Mốc đã đọc của các thành viên
+  pinnedMessages: {}, // { "group_2": [msg1, msg2] }
 
   setOnlineStatus: (userId, isOnline, lastSeen = null) => set((state) => ({
     onlineUsers: {
@@ -61,15 +62,41 @@ const useChatStore = create((set, get) => ({
   updateMessage: (type, id, messageId, updates) => {
     const key = `${type}_${id}`;
     set((state) => {
-      const currentMessages = state.messages[key] || [];
-      const newMessages = currentMessages.map(m => 
-        m.id === messageId ? { ...m, ...updates } : m
-      );
+      const msgs = state.messages[key] || [];
+      const index = msgs.findIndex((m) => m.id === messageId || m.id === String(messageId));
+      if (index === -1) return state;
+
+      const newMsgs = [...msgs];
+      newMsgs[index] = { ...newMsgs[index], ...updates };
+      return { messages: { ...state.messages, [key]: newMsgs } };
+    });
+  },
+
+  // === Pinned Messages ===
+  setPinnedMessages: (type, id, pins) => {
+    const key = `${type}_${id}`;
+    set((state) => ({
+      pinnedMessages: { ...state.pinnedMessages, [key]: pins }
+    }));
+  },
+
+  addPinnedMessage: (type, id, pin) => {
+    const key = `${type}_${id}`;
+    set((state) => {
+      const currentPins = state.pinnedMessages[key] || [];
+      // Đưa ghim mới lên đầu
       return {
-        messages: {
-          ...state.messages,
-          [key]: newMessages
-        }
+        pinnedMessages: { ...state.pinnedMessages, [key]: [pin, ...currentPins] }
+      };
+    });
+  },
+
+  removePinnedMessage: (type, id, messageId) => {
+    const key = `${type}_${id}`;
+    set((state) => {
+      const currentPins = state.pinnedMessages[key] || [];
+      return {
+        pinnedMessages: { ...state.pinnedMessages, [key]: currentPins.filter(p => p.messageId !== String(messageId) && p.messageId !== messageId) }
       };
     });
   },

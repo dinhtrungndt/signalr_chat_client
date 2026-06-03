@@ -151,6 +151,29 @@ const socketService = {
     });
 
     // ==========================================
+    // SỰ KIỆN GHIM TIN NHẮN
+    // ==========================================
+    socket.on('message_pinned', (pin) => {
+      if (pin.groupId) {
+        useChatStore.getState().addPinnedMessage('group', pin.groupId, pin);
+      } else {
+        const currentUser = useAuthStore.getState().user;
+        const partnerId = pin.user1Id === currentUser?.id ? pin.user2Id : pin.user1Id;
+        useChatStore.getState().addPinnedMessage('direct', partnerId, pin);
+      }
+    });
+
+    socket.on('message_unpinned', (data) => {
+      if (data.groupId) {
+        useChatStore.getState().removePinnedMessage('group', data.groupId, data.messageId);
+      } else {
+        const currentUser = useAuthStore.getState().user;
+        const partnerId = data.user1Id === currentUser?.id ? data.user2Id : data.user1Id;
+        useChatStore.getState().removePinnedMessage('direct', partnerId, data.messageId);
+      }
+    });
+
+    // ==========================================
     // SỰ KIỆN ĐÃ ĐỌC (WATERMARK)
     // ==========================================
     socket.on('message_read', (data) => {

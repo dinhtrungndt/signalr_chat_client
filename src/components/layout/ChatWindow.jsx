@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import React, { useState, useEffect, useRef } from 'react';
@@ -17,7 +17,7 @@ const formatTime = (dateStr) => {
   }
 };
 
-const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onImageClick }) => {
+const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImageClick }) => {
   if (message.type === 'SYSTEM') {
     let content = message.content;
     let isSilent = false;
@@ -58,6 +58,19 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onImageClick }
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+          </button>
+        )}
+
+        {/* Nút Ghim */}
+        {message.type !== 'RECALLED' && (
+          <button
+            onClick={() => onPin(message)}
+            className="p-1 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-full"
+            title="Ghim tin nhắn"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
           </button>
         )}
@@ -206,12 +219,16 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
   const initMessages = useChatStore((s) => s.initMessages);
   const addMessage = useChatStore((s) => s.addMessage);
+  
+  const pinnedMessages = useChatStore((s) => s.pinnedMessages[conversationKey] || EMPTY_ARRAY);
+  const setPinnedMessages = useChatStore((s) => s.setPinnedMessages);
 
   const currentUser = useAuthStore((s) => s.user);
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isGroupMembersModalOpen, setIsGroupMembersModalOpen] = useState(false);
+  const [isPinnedDropdownOpen, setIsPinnedDropdownOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
   const [pendingFiles, setPendingFiles] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
@@ -235,6 +252,41 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       lastPage.pagination?.hasMore ? lastPage.pagination?.nextCursor : undefined,
     enabled: !!activeConversation,
   });
+
+  // Fetch Pinned Messages
+  useQuery({
+    queryKey: ['pinned-messages', conversationKey],
+    queryFn: async () => {
+      const params = activeConversation.type === 'group' ? { groupId: activeConversation.id } : { partnerId: activeConversation.id };
+      const res = await messageApi.getPinnedMessages(params);
+      setPinnedMessages(activeConversation.type, activeConversation.id, res.data.data);
+      return res.data.data;
+    },
+    enabled: !!activeConversation,
+  });
+
+  const handlePinMessage = async (message) => {
+    try {
+      const data = activeConversation.type === 'group' ? { groupId: activeConversation.id } : { partnerId: activeConversation.id };
+      await messageApi.pinMessage(message.id, data);
+    } catch (err) {
+      if (err.response?.data?.message) {
+        alert(err.response.data.message);
+      } else {
+        alert('Có lỗi xảy ra khi ghim tin nhắn.');
+      }
+    }
+  };
+
+  const handleUnpinMessage = async (messageId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn bỏ ghim tin nhắn này?')) return;
+    try {
+      await messageApi.unpinMessage(messageId);
+    } catch (err) {
+      console.error(err);
+      alert('Không thể bỏ ghim tin nhắn.');
+    }
+  };
 
   // Khi load trang đầu, khởi tạo tin nhắn vào store
   useEffect(() => {
@@ -461,6 +513,76 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
         groupId={activeConversation.type === 'group' ? activeConversation.id : null}
       />
 
+      {/* Pinned Header */}
+      {pinnedMessages && pinnedMessages.length > 0 && (
+        <div className="relative">
+          <div 
+            className="bg-amber-50/50 border-b border-amber-100 px-4 py-2 flex items-center justify-between group cursor-pointer hover:bg-amber-50 transition"
+            onClick={() => setIsPinnedDropdownOpen(!isPinnedDropdownOpen)}
+          >
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+              <div className="flex flex-col min-w-0 flex-1">
+                <p className="text-[10px] font-semibold text-amber-600">
+                  Tin ghim ({pinnedMessages.length}/5)
+                </p>
+                <p className="text-xs text-slate-700 truncate hover:text-indigo-600 transition">
+                  {pinnedMessages[0].message?.type === 'TEXT' ? pinnedMessages[0].message?.content : (pinnedMessages[0].message?.type === 'IMAGE' ? '[Hình ảnh]' : '[Tập tin]')}
+                </p>
+              </div>
+            </div>
+            
+            <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 text-slate-400 transition-transform ${isPinnedDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+
+          {/* Dropdown Menu */}
+          {isPinnedDropdownOpen && (
+            <div className="absolute top-full left-0 right-0 z-10 bg-white border-b border-slate-200 shadow-lg max-h-64 overflow-y-auto">
+              {pinnedMessages.map((pin) => (
+                <div key={pin.id} className="px-4 py-3 border-b border-slate-100 flex items-start gap-3 hover:bg-slate-50 transition group">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">
+                    {pin.message?.sender?.fullName?.charAt(0) || '?'}
+                  </div>
+                  <div 
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => {
+                      const el = document.getElementById(`msg-${pin.messageId}`);
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.classList.add('bg-amber-100', 'transition-colors', 'duration-1000');
+                        setTimeout(() => el.classList.remove('bg-amber-100'), 1500);
+                        setIsPinnedDropdownOpen(false);
+                      }
+                    }}
+                  >
+                    <p className="text-xs font-semibold text-slate-800 mb-0.5">{pin.message?.sender?.fullName}</p>
+                    <p className="text-sm text-slate-600 line-clamp-2">
+                      {pin.message?.type === 'TEXT' ? pin.message?.content : (pin.message?.type === 'IMAGE' ? '[Hình ảnh]' : '[Tập tin]')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleUnpinMessage(pin.messageId);
+                    }}
+                    className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-200 transition opacity-0 group-hover:opacity-100 flex-shrink-0"
+                    title="Bỏ ghim"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Vùng tin nhắn */}
       <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4">
         {/* Nút tải thêm tin cũ */}
@@ -482,7 +604,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
             .filter(([uid, uData]) => uid !== String(currentUser?.id) && String(uData.lastReadMessageId) === String(msg.id))
             .map(([uid, uData]) => uData);
 
-          return <MessageItem key={msg.id} message={msg} isOwn={msg.senderId === currentUser?.id} readers={readers} isAdmin={activeConversation?.role === 'ADMIN'} onReply={setReplyingTo} onImageClick={setPreviewImage} />;
+          return <MessageItem key={msg.id} message={msg} isOwn={msg.senderId === currentUser?.id} readers={readers} isAdmin={activeConversation?.role === 'ADMIN' || activeConversation?.role === 'DEPUTY'} onReply={setReplyingTo} onPin={handlePinMessage} onImageClick={setPreviewImage} />;
         })}
 
         {/* Typing indicator */}
