@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import React, { useState, useEffect, useRef } from 'react';
 import GroupMembersModal from './GroupMembersModal';
@@ -196,6 +196,7 @@ const EMPTY_OBJECT = {};
 const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const activeConversation = useChatStore((s) => s.activeConversation);
   const onlineUsers = useChatStore((s) => s.onlineUsers);
+  const userLastSeen = useChatStore((s) => s.userLastSeen);
   const conversationKey = activeConversation ? `${activeConversation.type}_${activeConversation.id}` : null;
 
   // Tránh lỗi Infinite Loop của useSyncExternalStore bằng cách dùng mảng hằng số (EMPTY_ARRAY)
@@ -432,8 +433,12 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
           <p className="font-semibold text-slate-900 text-sm truncate">{activeConversation.name}</p>
           <p className={`text-xs font-medium ${activeConversation.type === 'group' ? 'text-slate-500' : (onlineUsers[activeConversation.id] ? 'text-emerald-600' : 'text-slate-400')}`}>
             {activeConversation.type === 'group' 
-              ? 'Nhóm' 
-              : (onlineUsers[activeConversation.id] ? 'Đang hoạt động' : 'Không hoạt động')}
+              ? `Cộng đồng • ${activeConversation.memberCount || 0} thành viên`
+              : (onlineUsers[activeConversation.id] 
+                  ? 'Đang hoạt động' 
+                  : (userLastSeen[activeConversation.id] 
+                      ? `Hoạt động ${formatDistanceToNow(new Date(userLastSeen[activeConversation.id]), { addSuffix: true, locale: vi })}` 
+                      : 'Không hoạt động'))}
           </p>
         </div>
 
@@ -496,136 +501,145 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       </div>
 
       {/* Input gửi tin nhắn */}
-      <div className="px-3 sm:px-4 py-3 border-t border-slate-200/70 bg-white/70 backdrop-blur-xl">
-        <div className="flex items-end gap-2">
-          
-          {/* Nút Upload Ảnh */}
-          <button
-            type="button"
-            onClick={() => imageInputRef.current?.click()}
-            disabled={isUploading}
-            className="w-10 h-10 mb-0.5 flex-shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition"
-            title="Gửi hình ảnh"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </button>
-          <input 
-            type="file" 
-            ref={imageInputRef} 
-            hidden 
-            multiple
-            accept="image/*" 
-            onChange={handleFileSelect}
-          />
-
-          {/* Nút Upload Tệp */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="w-10 h-10 mb-0.5 flex-shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition"
-            title="Đính kèm tệp"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-            </svg>
-          </button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            hidden 
-            multiple
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt" 
-            onChange={handleFileSelect}
-          />
-
-          <div className="flex-1 flex flex-col min-w-0 bg-slate-50 border border-slate-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200 focus-within:bg-white rounded-2xl transition-all duration-200">
-            {/* Thanh Preview File Hàng Chờ */}
-            {pendingFiles.length > 0 && (
-              <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-slate-200 overflow-x-auto custom-scrollbar">
-                {pendingFiles.map(pf => (
-                  <div key={pf.id} className="relative flex-shrink-0 group">
-                    {pf.previewUrl ? (
-                      <img src={pf.previewUrl} alt="preview" className="w-12 h-12 rounded-lg object-cover border border-slate-200" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => removePendingFile(pf.id)}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 shadow-sm opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            {/* Thanh Preview Trả Lời */}
-            {replyingTo && (
-              <div className="flex items-start justify-between px-4 pt-3 pb-2 border-b border-slate-200">
-                <div className="flex flex-col min-w-0 pr-2">
-                  <span className="text-[11px] font-semibold text-indigo-600 mb-0.5">
-                    Đang trả lời {replyingTo.sender?.fullName}
-                  </span>
-                  <span className="text-xs text-slate-500 truncate">
-                    {replyingTo.type === 'TEXT' ? replyingTo.content : (replyingTo.type === 'IMAGE' ? '[Hình ảnh]' : '[Tập tin]')}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setReplyingTo(null)}
-                  className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            )}
-
-            <textarea
-              value={inputText}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              rows={1}
-              placeholder={`Nhắn tin ${activeConversation.type === 'group' ? 'nhóm' : activeConversation.name}...`}
-              className="w-full resize-none bg-transparent border-none focus:ring-0 px-4 py-3 min-h-[44px] max-h-32 text-sm leading-5 placeholder-slate-400"
+      {activeConversation.type === 'group' && activeConversation.isReadOnly && activeConversation.role === 'MEMBER' ? (
+        <div className="px-3 sm:px-4 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-center">
+          <p className="text-sm text-slate-500 text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 inline-block mr-1.5 -mt-0.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            Chỉ trưởng/phó cộng đồng được gửi tin nhắn vào cộng đồng. <span className="text-indigo-500 hover:underline cursor-pointer">Tìm hiểu thêm</span>
+          </p>
+        </div>
+      ) : (
+        <div className="px-3 sm:px-4 py-3 border-t border-slate-200/70 bg-white/70 backdrop-blur-xl">
+          <div className="flex items-end gap-2">
+            
+            {/* Nút Upload Ảnh */}
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={isUploading}
+              className="w-10 h-10 mb-0.5 flex-shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition"
+              title="Gửi hình ảnh"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </button>
+            <input 
+              type="file" 
+              ref={imageInputRef} 
+              hidden 
+              multiple
+              accept="image/*" 
+              onChange={handleFileSelect}
             />
+
+            {/* Nút Upload Tệp */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="w-10 h-10 mb-0.5 flex-shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition"
+              title="Đính kèm tệp"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              </svg>
+            </button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              hidden 
+              multiple
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt" 
+              onChange={handleFileSelect}
+            />
+
+            <div className="flex-1 flex flex-col min-w-0 bg-slate-50 border border-slate-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200 focus-within:bg-white rounded-2xl transition-all duration-200">
+              {/* Thanh Preview File Hàng Chờ */}
+              {pendingFiles.length > 0 && (
+                <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-slate-200 overflow-x-auto custom-scrollbar">
+                  {pendingFiles.map(pf => (
+                    <div key={pf.id} className="relative flex-shrink-0 group">
+                      {pf.previewUrl ? (
+                        <img src={pf.previewUrl} alt="preview" className="w-12 h-12 rounded-lg object-cover border border-slate-200" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removePendingFile(pf.id)}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 shadow-sm opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Thanh Preview Trả Lời */}
+              {replyingTo && (
+                <div className="flex items-start justify-between px-4 pt-3 pb-2 border-b border-slate-200">
+                  <div className="flex flex-col min-w-0 pr-2">
+                    <span className="text-[11px] font-semibold text-indigo-600 mb-0.5">
+                      Đang trả lời {replyingTo.sender?.fullName}
+                    </span>
+                    <span className="text-xs text-slate-500 truncate">
+                      {replyingTo.type === 'TEXT' ? replyingTo.content : (replyingTo.type === 'IMAGE' ? '[Hình ảnh]' : '[Tập tin]')}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReplyingTo(null)}
+                    className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
+              <textarea
+                value={inputText}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                rows={1}
+                placeholder={`Nhắn tin ${activeConversation.type === 'group' ? 'nhóm' : activeConversation.name}...`}
+                className="w-full resize-none bg-transparent border-none focus:ring-0 px-4 py-3 min-h-[44px] max-h-32 text-sm leading-5 placeholder-slate-400"
+              />
+            </div>
+
+            <button
+              onClick={handleSend}
+              disabled={(!inputText.trim() && pendingFiles.length === 0) || isSending}
+              className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl
+                bg-gradient-to-r from-indigo-600 to-sky-500
+                hover:from-indigo-500 hover:to-sky-400
+                disabled:opacity-40 disabled:cursor-not-allowed
+                active:scale-95 transition-all duration-150"
+              type="button"
+              title="Gửi"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-5 h-5 text-white"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+              </svg>
+            </button>
           </div>
 
-          <button
-            onClick={handleSend}
-            disabled={(!inputText.trim() && pendingFiles.length === 0) || isSending}
-            className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl
-              bg-gradient-to-r from-indigo-600 to-sky-500
-              hover:from-indigo-500 hover:to-sky-400
-              disabled:opacity-40 disabled:cursor-not-allowed
-              active:scale-95 transition-all duration-150"
-            type="button"
-            title="Gửi"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-5 h-5 text-white"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-            </svg>
-          </button>
+          <p className="text-[10px] text-slate-400 mt-1.5 ml-1">Enter để gửi · Shift+Enter xuống dòng</p>
         </div>
-
-        <p className="text-[10px] text-slate-400 mt-1.5 ml-1">Enter để gửi · Shift+Enter xuống dòng</p>
-      </div>
+      )}
 
       {/* Render Modal Xem Thành Viên */}
       {activeConversation.type === 'group' && (

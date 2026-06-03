@@ -107,6 +107,37 @@ const socketService = {
     });
 
     // ==========================================
+    // SỰ KIỆN NHÓM (READONLY & ROLE)
+    // ==========================================
+    socket.on('group_readonly_changed', (data) => {
+      const { groupId, isReadOnly } = data;
+      const activeConversation = useChatStore.getState().activeConversation;
+      if (activeConversation?.type === 'group' && activeConversation?.id === groupId) {
+        useChatStore.getState().setActiveConversation({
+          ...activeConversation,
+          isReadOnly
+        });
+      }
+      window.dispatchEvent(new Event('group_updated'));
+    });
+
+    socket.on('group_member_updated', (data) => {
+      const { groupId, userId, role } = data;
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.id === userId) {
+        const activeConversation = useChatStore.getState().activeConversation;
+        if (activeConversation?.type === 'group' && activeConversation?.id === groupId) {
+          useChatStore.getState().setActiveConversation({
+            ...activeConversation,
+            role
+          });
+        }
+      }
+      window.dispatchEvent(new CustomEvent('group_members_updated', { detail: { groupId } }));
+      window.dispatchEvent(new Event('group_updated'));
+    });
+
+    // ==========================================
     // SỰ KIỆN THU HỒI TIN NHẮN
     // ==========================================
     socket.on('message_recalled', (data) => {
@@ -140,8 +171,13 @@ const socketService = {
       useChatStore.getState().setOnlineStatus(userId, true);
     });
 
-    socket.on('userOffline', (userId) => {
-      useChatStore.getState().setOnlineStatus(userId, false);
+    socket.on('userOffline', (data) => {
+      // payload có thể là userId (number) hoặc object { userId, lastSeen }
+      if (typeof data === 'object') {
+        useChatStore.getState().setOnlineStatus(data.userId, false, data.lastSeen);
+      } else {
+        useChatStore.getState().setOnlineStatus(data, false);
+      }
     });
   },
 

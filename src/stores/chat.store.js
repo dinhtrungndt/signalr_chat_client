@@ -5,13 +5,20 @@ const useChatStore = create((set, get) => ({
   messages: {}, // { "direct_1": [...], "group_2": [...] }
   typingUsers: {}, // { "direct_1": [...userIds] }
   onlineUsers: {}, // { [userId]: boolean } // Trạng thái online của user
+  userLastSeen: {}, // { [userId]: Date string }
   watermarks: {}, // { "group_2": { "userId": lastReadMessageId } } // Mốc đã đọc của các thành viên
 
-  setOnlineStatus: (userId, isOnline) => set((state) => ({
+  setOnlineStatus: (userId, isOnline, lastSeen = null) => set((state) => ({
     onlineUsers: {
       ...state.onlineUsers,
       [userId]: isOnline
-    }
+    },
+    ...(lastSeen ? {
+      userLastSeen: {
+        ...state.userLastSeen,
+        [userId]: lastSeen
+      }
+    } : {})
   })),
 
   setActiveConversation: (conversation) =>

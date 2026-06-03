@@ -3,7 +3,9 @@ import useChatStore from '../../stores/chat.store';
 import useAuthStore from '../../stores/auth.store';
 import messageApi from '../../api/message.api';
 import socketService from '../../services/socket.service';
+import groupApi from '../../api/group.api';
 import GroupMembersModal from './GroupMembersModal';
+const EMPTY_ARRAY = [];
 
 const RightSidebar = ({ onClose, onImageClick }) => {
   const activeConversation = useChatStore((s) => s.activeConversation);
@@ -14,7 +16,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
   const [files, setFiles] = useState([]);
   
   const conversationKey = activeConversation ? `${activeConversation.type}_${activeConversation.id}` : null;
-  const messages = useChatStore((s) => s.messages[conversationKey] || []);
+  const messages = useChatStore((s) => s.messages[conversationKey] || EMPTY_ARRAY);
   
   // Search
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -96,15 +98,37 @@ const RightSidebar = ({ onClose, onImageClick }) => {
     return () => clearTimeout(handler);
   }, [searchKeyword, activeConversation]);
 
-  const handleDisbandGroup = () => {
+  const handleDisbandGroup = async () => {
     if (window.confirm('Bạn có chắc chắn muốn giải tán nhóm này không? Mọi dữ liệu sẽ bị xóa!')) {
-      socketService.disbandGroup(activeConversation.id);
+      try {
+        await groupApi.deleteGroup(activeConversation.id);
+        useChatStore.getState().setActiveConversation(null);
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
-  const handleLeaveGroup = () => {
+  const handleLeaveGroup = async () => {
     if (window.confirm('Bạn có chắc chắn muốn rời nhóm này không?')) {
-      socketService.leaveGroup(activeConversation.id);
+      try {
+        await groupApi.removeUser(activeConversation.id, currentUser.id);
+        useChatStore.getState().setActiveConversation(null);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handleToggleReadOnly = async () => {
+    try {
+      await groupApi.toggleReadOnly(activeConversation.id, !activeConversation.isReadOnly);
+      useChatStore.getState().setActiveConversation({
+        ...activeConversation,
+        isReadOnly: !activeConversation.isReadOnly
+      });
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -274,13 +298,24 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                 {isSettingOpen && (
                   <div className="px-4 pb-4 flex flex-col gap-1">
                     {isAdmin && (
-                      <button 
-                        onClick={handleDisbandGroup}
+                      <>
+                        <div className="flex items-center justify-between px-3 py-2.5 mb-1 bg-slate-50 rounded-lg">
+                          <span className="text-sm font-medium text-slate-700">Chỉ Admin/Phó nhóm được gửi tin</span>
+                          <button
+                            onClick={handleToggleReadOnly}
+                            className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors ${activeConversation.isReadOnly ? 'bg-indigo-500' : 'bg-slate-300'}`}
+                          >
+                            <div className={`bg-white w-3.5 h-3.5 rounded-full shadow-md transform transition-transform ${activeConversation.isReadOnly ? 'translate-x-5' : ''}`}></div>
+                          </button>
+                        </div>
+                        <button 
+                          onClick={handleDisbandGroup}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 text-red-600 transition w-full"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         <span className="text-sm font-medium">Giải tán nhóm</span>
                       </button>
+                      </>
                     )}
                     <button 
                       onClick={handleLeaveGroup}

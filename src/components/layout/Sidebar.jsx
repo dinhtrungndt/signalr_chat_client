@@ -133,8 +133,8 @@ const Sidebar = ({ onItemClick }) => {
   });
   const searchResults = searchResultsData || [];
 
-  const handleSelectConversation = (type, id, name, role = null) => {
-    setActiveConversation({ type, id, name, role });
+  const handleSelectConversation = (type, id, name, role = null, isReadOnly = false, memberCount = 0) => {
+    setActiveConversation({ type, id, name, role, isReadOnly, memberCount });
     setSearchQuery(''); // Xóa text tìm kiếm
     onItemClick?.();
   };
@@ -305,7 +305,7 @@ const Sidebar = ({ onItemClick }) => {
                               unreadCount: group.unreadCount || 0,
                             }}
                             isActive={activeConversation?.type === 'group' && activeConversation?.id === group.id}
-                            onClick={() => handleSelectConversation('group', group.id, group.name, group.role)}
+                            onClick={() => handleSelectConversation('group', group.id, group.name, group.role, group.isReadOnly, group.memberCount)}
                           />
                         );
                       })}
