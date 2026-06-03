@@ -4,6 +4,7 @@ import { vi } from 'date-fns/locale';
 import React, { useState, useEffect, useRef } from 'react';
 import GroupMembersModal from './GroupMembersModal';
 import ReactionListModal from './ReactionListModal';
+import UserProfileModal from './UserProfileModal';
 import AudioRecorder from './AudioRecorder';
 import WaveformPlayer from '../common/WaveformPlayer';
 import messageApi from '../../api/message.api';
@@ -293,6 +294,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [isSending, setIsSending] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isGroupMembersModalOpen, setIsGroupMembersModalOpen] = useState(false);
+  const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
   const [isPinnedDropdownOpen, setIsPinnedDropdownOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -590,8 +592,14 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
         <div 
           className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={onToggleRightSidebar}
-          title="Xem thông tin"
+          onClick={() => {
+            if (activeConversation.type === 'direct') {
+              setIsUserProfileModalOpen(true);
+            } else {
+              setIsGroupMembersModalOpen(true);
+            }
+          }}
+          title={activeConversation.type === 'direct' ? "Xem trang cá nhân" : "Xem thành viên nhóm"}
         >
           {activeConversation.avatar ? (
             <img src={`${process.env.REACT_APP_SOCKET_URL}${activeConversation.avatar}`} alt="Avatar" className="w-9 h-9 rounded-full object-cover" />
@@ -976,6 +984,13 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
           </div>
         </div>
       )}
+
+      {/* Render User Profile Modal */}
+      <UserProfileModal 
+        isOpen={isUserProfileModalOpen}
+        onClose={() => setIsUserProfileModalOpen(false)}
+        userId={activeConversation.type === 'direct' ? activeConversation.id : null}
+      />
     </div>
   );
 };

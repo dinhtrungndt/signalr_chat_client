@@ -230,9 +230,9 @@ const Sidebar = ({ onItemClick }) => {
   useEffect(() => {
     if (!activeConversation) {
       if (activeTab === 'direct' && recentChats.length > 0) {
-        setActiveConversation({ type: 'direct', id: recentChats[0].id, name: recentChats[0].fullName });
+        setActiveConversation({ type: 'direct', id: recentChats[0].id, name: recentChats[0].fullName, avatar: recentChats[0].avatar });
       } else if (activeTab === 'group' && groups.length > 0) {
-        setActiveConversation({ type: 'group', id: groups[0].id, name: groups[0].name, role: groups[0].role });
+        setActiveConversation({ type: 'group', id: groups[0].id, name: groups[0].name, avatar: groups[0].avatar, role: groups[0].role });
       }
     } else {
       // Nếu nhóm đang mở không còn trong danh sách (bị đuổi, giải tán, tự rời) thì clear nó
