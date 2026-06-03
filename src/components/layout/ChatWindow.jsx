@@ -4,6 +4,7 @@ import { vi } from 'date-fns/locale';
 import React, { useState, useEffect, useRef } from 'react';
 import GroupMembersModal from './GroupMembersModal';
 import ReactionListModal from './ReactionListModal';
+import AudioRecorder from './AudioRecorder';
 import messageApi from '../../api/message.api';
 import uploadApi from '../../api/upload.api';
 import socketService from '../../services/socket.service';
@@ -139,7 +140,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
           message.type === 'RECALLED' ? 'px-4 py-2.5 bg-slate-50 border border-slate-200 border-dashed text-slate-400 italic' : 'px-4 py-2.5',
           'rounded-2xl text-sm leading-relaxed break-words',
           message.type === 'RECALLED' ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') : 
-          message.type === 'IMAGE' ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') :
+          (message.type === 'IMAGE' || message.type === 'AUDIO') ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') :
           (isOwn ? 'msg-mine rounded-br-sm' : 'msg-other rounded-bl-sm'),
         ].join(' ')}
       >
@@ -208,6 +209,17 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
             </svg>
             <span className="truncate max-w-[150px]">{message.content.split('/').pop()}</span>
           </a>
+        )}
+        {message.type === 'AUDIO' && (
+          <div className="flex items-center gap-2 min-w-[200px]">
+            <audio 
+              controls 
+              src={`http://localhost:1411${message.content}`}
+              className="h-10 w-full max-w-[240px] outline-none"
+            >
+              Trình duyệt của bạn không hỗ trợ phát âm thanh.
+            </audio>
+          </div>
         )}
       </div>
 
@@ -286,6 +298,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [pendingFiles, setPendingFiles] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
   const [reactionsToShow, setReactionsToShow] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
   const messagesEndRef = useRef(null);
   const typingTimerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -464,6 +477,33 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       alert('Gửi tin nhắn hoặc file thất bại. Vui lòng thử lại!');
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleSendAudio = async (audioBlob) => {
+    setIsRecording(false);
+    if (!audioBlob || audioBlob.size === 0) return;
+    
+    const file = new File([audioBlob], `voice_${Date.now()}.webm`, { type: 'audio/webm' });
+    
+    try {
+      const res = await uploadApi.uploadFile(file);
+      // res là Axios response, data thực sự nằm trong res.data
+      const responseData = res.data;
+      if (responseData.status === 'success') {
+        const fileUrl = responseData.data ? responseData.data.url : responseData.url; // Xử lý cấu trúc response
+        
+        if (activeConversation.type === 'group') {
+          await socketService.sendGroupMessage(activeConversation.id, fileUrl, 'AUDIO', replyingTo?.id || null);
+        } else {
+          const msg = await socketService.sendDirectMessage(activeConversation.id, fileUrl, 'AUDIO', replyingTo?.id || null);
+          useChatStore.getState().addMessage('direct', activeConversation.id, msg);
+        }
+        setReplyingTo(null);
+      }
+    } catch (error) {
+      console.error('Lỗi khi tải lên file thu âm:', error);
+      alert('Gửi tin nhắn giọng nói thất bại. Vui lòng thử lại.');
     }
   };
 
@@ -789,8 +829,15 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
               onChange={handleFileSelect}
             />
 
-            <div className="flex-1 flex flex-col min-w-0 bg-slate-50 border border-slate-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200 focus-within:bg-white rounded-2xl transition-all duration-200">
-              {/* Thanh Preview File Hàng Chờ */}
+            {isRecording ? (
+              <AudioRecorder 
+                onSend={handleSendAudio} 
+                onCancel={() => setIsRecording(false)} 
+              />
+            ) : (
+              <>
+                <div className="flex-1 flex flex-col min-w-0 bg-slate-50 border border-slate-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200 focus-within:bg-white rounded-2xl transition-all duration-200">
+                {/* Thanh Preview File Hàng Chờ */}
               {pendingFiles.length > 0 && (
                 <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-slate-200 overflow-x-auto custom-scrollbar">
                   {pendingFiles.map(pf => (
@@ -849,27 +896,35 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                 className="w-full resize-none bg-transparent border-none focus:ring-0 px-4 py-3 min-h-[44px] max-h-32 text-sm leading-5 placeholder-slate-400"
               />
             </div>
-
-            <button
-              onClick={handleSend}
-              disabled={(!inputText.trim() && pendingFiles.length === 0) || isSending}
-              className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl
-                bg-gradient-to-r from-indigo-600 to-sky-500
-                hover:from-indigo-500 hover:to-sky-400
-                disabled:opacity-40 disabled:cursor-not-allowed
-                active:scale-95 transition-all duration-150"
-              type="button"
-              title="Gửi"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-5 h-5 text-white"
-                viewBox="0 0 24 24"
-                fill="currentColor"
+            {/* Nút gửi hoặc thu âm */}
+            {inputText.trim() || pendingFiles.length > 0 ? (
+              <button
+                onClick={handleSend}
+                disabled={isSending}
+                className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-sky-500 hover:from-indigo-500 hover:to-sky-400 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all duration-150"
+                type="button"
+                title="Gửi"
               >
-                <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-              </svg>
-            </button>
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                </svg>
+              </button>
+            ) : (
+              !isRecording && (
+                <button
+                  onClick={() => setIsRecording(true)}
+                  className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 active:scale-95 transition-all duration-150"
+                  type="button"
+                  title="Ghi âm giọng nói"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                </button>
+              )
+            )}
+              </>
+            )}
           </div>
 
           <p className="text-[10px] text-slate-400 mt-1.5 ml-1">Enter để gửi · Shift+Enter xuống dòng</p>
