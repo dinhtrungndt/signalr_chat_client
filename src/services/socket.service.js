@@ -221,7 +221,8 @@ const socketService = {
       if (groupId) {
         setWatermark('group', groupId, user, lastReadMessageId);
       } else if (partnerId) {
-        setWatermark('direct', partnerId, user, lastReadMessageId);
+        // user.userId là người vừa mới xem tin nhắn (tức là đối tác của mình trong chat 1-1)
+        setWatermark('direct', user.userId, user, lastReadMessageId);
       }
     });
 
@@ -238,6 +239,27 @@ const socketService = {
         useChatStore.getState().setOnlineStatus(data.userId, false, data.lastSeen);
       } else {
         useChatStore.getState().setOnlineStatus(data, false);
+      }
+    });
+
+    // ==========================================
+    // SỰ KIỆN TYPING (Đang gõ...)
+    // ==========================================
+    socket.on('userTyping', (data) => {
+      // data = { userId, groupId } hoặc { userId }
+      if (data.groupId) {
+        useChatStore.getState().setTyping('group', data.groupId, data.userId, true);
+      } else {
+        // Chat 1-1
+        useChatStore.getState().setTyping('direct', data.userId, data.userId, true);
+      }
+    });
+
+    socket.on('userStopTyping', (data) => {
+      if (data.groupId) {
+        useChatStore.getState().setTyping('group', data.groupId, data.userId, false);
+      } else {
+        useChatStore.getState().setTyping('direct', data.userId, data.userId, false);
       }
     });
   },
