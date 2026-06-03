@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import GroupMembersModal from './GroupMembersModal';
 import ReactionListModal from './ReactionListModal';
 import AudioRecorder from './AudioRecorder';
+import WaveformPlayer from '../common/WaveformPlayer';
 import messageApi from '../../api/message.api';
 import uploadApi from '../../api/upload.api';
 import socketService from '../../services/socket.service';
@@ -211,15 +212,10 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
           </a>
         )}
         {message.type === 'AUDIO' && (
-          <div className="flex items-center gap-2 min-w-[200px]">
-            <audio 
-              controls 
-              src={`http://localhost:1411${message.content}`}
-              className="h-10 w-full max-w-[240px] outline-none"
-            >
-              Trình duyệt của bạn không hỗ trợ phát âm thanh.
-            </audio>
-          </div>
+          <WaveformPlayer 
+            audioUrl={`http://localhost:1411${message.content}`} 
+            isOwn={isOwn} 
+          />
         )}
       </div>
 
