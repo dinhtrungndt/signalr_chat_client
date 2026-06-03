@@ -8,6 +8,7 @@ import useDebounce from '../../hooks/useDebounce';
 import useAuthStore from '../../stores/auth.store';
 import useChatStore from '../../stores/chat.store';
 import CreateGroupModal from './CreateGroupModal';
+import ProfileModal from './ProfileModal';
 
 const formatTime = (dateStr) => {
   try {
@@ -59,9 +60,13 @@ const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClick }) =>
       >
         {/* Avatar */}
         <div className="relative">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-            {item.name?.charAt(0)?.toUpperCase() || '?'}
-          </div>
+          {item.avatar ? (
+            <img src={`${process.env.REACT_APP_SOCKET_URL}${item.avatar}`} alt="Avatar" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+              {item.name?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+          )}
           {item.isOnline !== undefined && (
             <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${item.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
           )}
@@ -145,6 +150,7 @@ const Sidebar = ({ onItemClick }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('direct'); // 'direct' hoặc 'group'
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   // Gọi API lấy Groups
@@ -247,8 +253,8 @@ const Sidebar = ({ onItemClick }) => {
   });
   const searchResults = searchResultsData || [];
 
-  const handleSelectConversation = (type, id, name, role = null, isReadOnly = false, memberCount = 0) => {
-    setActiveConversation({ type, id, name, role, isReadOnly, memberCount });
+  const handleSelectConversation = (type, id, name, avatar = null, role = null, isReadOnly = false, memberCount = 0) => {
+    setActiveConversation({ type, id, name, avatar, role, isReadOnly, memberCount });
     setSearchQuery(''); // Xóa text tìm kiếm
     onItemClick?.();
   };
@@ -273,12 +279,21 @@ const Sidebar = ({ onItemClick }) => {
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-bold shadow-sm">
-            {user?.fullName?.charAt(0)?.toUpperCase()}
+        <div 
+          onClick={() => setIsProfileModalOpen(true)}
+          className="flex items-center gap-3 p-2 -ml-2 rounded-xl hover:bg-slate-100 cursor-pointer transition group"
+        >
+          <div className="relative">
+            {user?.avatar ? (
+              <img src={`${process.env.REACT_APP_SOCKET_URL}${user.avatar}`} alt="Avatar" className="w-10 h-10 rounded-full object-cover shadow-sm group-hover:opacity-90" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-bold shadow-sm group-hover:opacity-90">
+                {user?.fullName?.charAt(0)?.toUpperCase()}
+              </div>
+            )}
           </div>
-          <div>
-            <p className="font-semibold text-slate-900 text-sm">{user?.username}</p>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-slate-900 text-sm truncate">{user?.fullName}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
               <span className="text-xs text-emerald-600 font-medium">Đang hoạt động</span>
@@ -322,10 +337,11 @@ const Sidebar = ({ onItemClick }) => {
                         id: u.id,
                         name: u.fullName,
                         subtitle: u.username,
+                        avatar: u.avatar,
                         isOnline: onlineUsers[u.id]
                     }}
                     isActive={false}
-                    onClick={() => handleSelectConversation('direct', u.id, u.fullName)}
+                    onClick={() => handleSelectConversation('direct', u.id, u.fullName, u.avatar)}
                   />
                 ))}
               </div>
@@ -373,6 +389,7 @@ const Sidebar = ({ onItemClick }) => {
                               id: chat.id,
                               name: chat.fullName,
                               subtitle: getSubtitle(chat.lastMessage, prefix),
+                              avatar: chat.avatar,
                               isOnline: onlineUsers[chat.id],
                               time: chat.lastMessage?.createdAt ? formatTime(chat.lastMessage.createdAt) : null,
                               unreadCount: chat.unreadCount || 0,
@@ -380,7 +397,7 @@ const Sidebar = ({ onItemClick }) => {
                             isActive={activeConversation?.type === 'direct' && activeConversation?.id === chat.id}
                             isPinned={chat.isPinned}
                             onTogglePin={() => handleTogglePin('direct', chat.id)}
-                            onClick={() => handleSelectConversation('direct', chat.id, chat.fullName)}
+                            onClick={() => handleSelectConversation('direct', chat.id, chat.fullName, chat.avatar)}
                           />
                         );
                       })}
@@ -417,13 +434,14 @@ const Sidebar = ({ onItemClick }) => {
                               id: group.id,
                               name: group.name,
                               subtitle: getSubtitle(group.lastMessage, prefix),
+                              avatar: group.avatar,
                               time: group.lastMessage?.createdAt ? formatTime(group.lastMessage.createdAt) : null,
                               unreadCount: group.unreadCount || 0,
                             }}
                             isActive={activeConversation?.type === 'group' && activeConversation?.id === group.id}
                             isPinned={group.isPinned}
                             onTogglePin={() => handleTogglePin('group', group.id)}
-                            onClick={() => handleSelectConversation('group', group.id, group.name, group.role, group.isReadOnly, group.memberCount)}
+                            onClick={() => handleSelectConversation('group', group.id, group.name, group.avatar, group.role, group.isReadOnly, group.memberCount)}
                           />
                         );
                       })}
@@ -445,6 +463,11 @@ const Sidebar = ({ onItemClick }) => {
         isOpen={isCreateGroupModalOpen}
         onClose={() => setIsCreateGroupModalOpen(false)}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['my-groups'] })}
+      />
+
+      <ProfileModal 
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
       />
     </div>
   );

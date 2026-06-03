@@ -151,11 +151,15 @@ const RightSidebar = ({ onClose, onImageClick }) => {
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {/* Avatar & Name */}
         <div className="flex flex-col items-center justify-center p-6 bg-white border-b border-slate-200">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-3xl font-bold shadow-md mb-3">
-            {activeConversation.type === 'group' 
-              ? activeConversation.name.charAt(0).toUpperCase()
-              : activeConversation.name.charAt(0).toUpperCase()}
-          </div>
+          {activeConversation.avatar ? (
+            <img src={`${process.env.REACT_APP_SOCKET_URL}${activeConversation.avatar}`} alt="Avatar" className="w-20 h-20 rounded-full object-cover shadow-md mb-3" />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-3xl font-bold shadow-md mb-3">
+              {activeConversation.type === 'group' 
+                ? activeConversation.name.charAt(0).toUpperCase()
+                : activeConversation.name.charAt(0).toUpperCase()}
+            </div>
+          )}
           <h3 className="text-lg font-bold text-slate-800">{activeConversation.name}</h3>
           
           <div className="flex gap-4 mt-4">

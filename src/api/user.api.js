@@ -8,6 +8,7 @@ const userApi = {
   getPinnedConversations: () => axiosClient.get('/users/pinned-conversations'),
   pinConversation: (type, entityId) => axiosClient.post('/users/pinned-conversations', { type, entityId }),
   unpinConversation: (type, entityId) => axiosClient.delete('/users/pinned-conversations', { data: { type, entityId } }),
+  updateProfile: (data) => axiosClient.put('/users/profile', data),
 };
 
 export default userApi;

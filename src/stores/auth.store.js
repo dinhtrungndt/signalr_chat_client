@@ -60,6 +60,8 @@ const useAuthStore = create((set) => ({
     return data;
   },
 
+  updateUser: (user) => set({ user }),
+
   checkAuth: async () => {
     set({ isLoading: true });
     const refreshToken = loadRefreshToken();

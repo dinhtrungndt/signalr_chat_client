@@ -47,9 +47,13 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
     {/* Avatar người gửi (chỉ hiện khi không phải mình) */}
     {!isOwn && (
       isLastInGroup ? (
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-          {message.sender?.fullName?.charAt(0) || '?'}
-        </div>
+        message.sender?.avatar ? (
+          <img src={`${process.env.REACT_APP_SOCKET_URL}${message.sender.avatar}`} alt="Avatar" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+        ) : (
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            {message.sender?.fullName?.charAt(0) || '?'}
+          </div>
+        )
       ) : (
         <div className="w-7 h-7 flex-shrink-0"></div>
       )
@@ -584,21 +588,31 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
           </svg>
         </button>
 
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm">
-          {activeConversation.name?.charAt(0)?.toUpperCase() || '?'}
-        </div>
+        <div 
+          className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={onToggleRightSidebar}
+          title="Xem thông tin"
+        >
+          {activeConversation.avatar ? (
+            <img src={`${process.env.REACT_APP_SOCKET_URL}${activeConversation.avatar}`} alt="Avatar" className="w-9 h-9 rounded-full object-cover" />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm">
+              {activeConversation.name?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+          )}
 
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-slate-900 text-sm truncate">{activeConversation.name}</p>
-          <p className={`text-xs font-medium ${activeConversation.type === 'group' ? 'text-slate-500' : (onlineUsers[activeConversation.id] ? 'text-emerald-600' : 'text-slate-400')}`}>
-            {activeConversation.type === 'group' 
-              ? `Cộng đồng • ${activeConversation.memberCount || 0} thành viên`
-              : (onlineUsers[activeConversation.id] 
-                  ? 'Đang hoạt động' 
-                  : (userLastSeen[activeConversation.id] 
-                      ? `Hoạt động ${formatDistanceToNow(new Date(userLastSeen[activeConversation.id]), { addSuffix: true, locale: vi })}` 
-                      : 'Không hoạt động'))}
-          </p>
+          <div className="min-w-0 flex-1 pr-4">
+            <p className="font-semibold text-slate-900 text-sm truncate">{activeConversation.name}</p>
+            <p className={`text-xs font-medium ${activeConversation.type === 'group' ? 'text-slate-500' : (onlineUsers[activeConversation.id] ? 'text-emerald-600' : 'text-slate-400')}`}>
+              {activeConversation.type === 'group' 
+                ? `Cộng đồng • ${activeConversation.memberCount || 0} thành viên`
+                : (onlineUsers[activeConversation.id] 
+                    ? 'Đang hoạt động' 
+                    : (userLastSeen[activeConversation.id] 
+                        ? `Hoạt động ${formatDistanceToNow(new Date(userLastSeen[activeConversation.id]), { addSuffix: true, locale: vi })}` 
+                        : 'Không hoạt động'))}
+            </p>
+          </div>
         </div>
 
         {/* Nút xem thông tin hội thoại (Right Sidebar) */}
