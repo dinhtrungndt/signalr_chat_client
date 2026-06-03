@@ -31,9 +31,29 @@ const useChatStore = create((set, get) => ({
   // Khởi tạo tin nhắn ban đầu (từ API lịch sử)
   initMessages: (type, id, messages) => {
     const key = `${type}_${id}`;
-    set((state) => ({
-      messages: { ...state.messages, [key]: [...messages].reverse() },
-    }));
+    set((state) => {
+      const reversedMessages = [...messages].reverse();
+      const existingMessages = state.messages[key] || [];
+      
+      // Nếu store đã có tin nhắn (qua socket), ta cần giữ lại những tin nhắn MỚI HƠN dữ liệu từ API (tránh bị cache cũ đè mất)
+      const lastApiMessage = reversedMessages[reversedMessages.length - 1];
+      if (lastApiMessage && existingMessages.length > 0) {
+         try {
+           const newerMessages = existingMessages.filter(m => window.BigInt(m.id) > window.BigInt(lastApiMessage.id));
+           if (newerMessages.length > 0) {
+              return {
+                messages: { ...state.messages, [key]: [...reversedMessages, ...newerMessages] },
+              };
+           }
+         } catch (e) {
+           console.error("Error merging messages:", e);
+         }
+      }
+
+      return {
+        messages: { ...state.messages, [key]: reversedMessages },
+      };
+    });
   },
 
   // Thêm tin nhắn cũ hơn khi cuộn lên (prepend)

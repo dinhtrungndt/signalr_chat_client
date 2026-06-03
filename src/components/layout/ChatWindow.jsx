@@ -406,7 +406,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
         window.dispatchEvent(new Event(groupId ? 'group_updated' : 'chat_updated'));
       }).catch(console.error);
     }
-  }, [messages.length, activeConversation]);
+  }, [messages[messages.length - 1]?.id, activeConversation]);
 
   // Gửi tin nhắn
   const handleSend = async () => {
