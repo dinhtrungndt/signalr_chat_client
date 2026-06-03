@@ -17,7 +17,7 @@ const formatTime = (dateStr) => {
   }
 };
 
-const MessageItem = ({ message, isOwn }) => (
+const MessageItem = ({ message, isOwn, readers }) => (
   <div className={`flex items-end gap-2 mb-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
     {/* Avatar người gửi (chỉ hiện khi không phải mình) */}
     {!isOwn && (
@@ -65,17 +65,32 @@ const MessageItem = ({ message, isOwn }) => (
 
       <p
         className={[
-          'text-[10px] text-slate-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity',
+          'text-[10px] text-slate-400 mt-1',
           isOwn ? 'text-right mr-1' : 'ml-1',
         ].join(' ')}
       >
         {formatTime(message.createdAt)}
       </p>
+
+      {/* Read Receipts */}
+      {readers?.length > 0 && (
+        <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end mr-1' : 'justify-start ml-1'}`}>
+          {readers.slice(0, 3).map((reader, index) => (
+            <div key={index} className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 border border-white flex items-center justify-center text-[7px] font-bold text-white shadow-sm" title={`Đã xem bởi ${reader.fullName}`}>
+               {reader.fullName?.charAt(0) || '?'}
+            </div>
+          ))}
+          {readers.length > 3 && (
+            <span className="text-[9px] text-slate-400 font-medium ml-0.5">+{readers.length - 3}</span>
+          )}
+        </div>
+      )}
     </div>
   </div>
 );
 
 const EMPTY_ARRAY = [];
+const EMPTY_OBJECT = {};
 
 const ChatWindow = ({ onOpenSidebar }) => {
   const activeConversation = useChatStore((s) => s.activeConversation);
@@ -85,6 +100,7 @@ const ChatWindow = ({ onOpenSidebar }) => {
   // Tránh lỗi Infinite Loop của useSyncExternalStore bằng cách dùng mảng hằng số (EMPTY_ARRAY)
   const messages = useChatStore((s) => s.messages[conversationKey] || EMPTY_ARRAY);
   const typing = useChatStore((s) => s.typingUsers[conversationKey] || EMPTY_ARRAY);
+  const watermarks = useChatStore((s) => s.watermarks[conversationKey] || EMPTY_OBJECT);
 
   const initMessages = useChatStore((s) => s.initMessages);
   const addMessage = useChatStore((s) => s.addMessage);
@@ -126,7 +142,19 @@ const ChatWindow = ({ onOpenSidebar }) => {
   // Auto scroll xuống khi có tin mới
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+    
+    // Đánh dấu đã đọc khi có tin nhắn mới hoặc mới mở chat
+    if (messages.length > 0 && activeConversation) {
+      const lastMessage = messages[messages.length - 1];
+      const groupId = activeConversation.type === 'group' ? activeConversation.id : null;
+      const partnerId = activeConversation.type === 'direct' ? activeConversation.id : null;
+      
+      socketService.markRead(groupId, partnerId, lastMessage.id).then(() => {
+        // Sau khi đánh dấu đọc xong, báo cho Sidebar cập nhật lại unreadCount
+        window.dispatchEvent(new Event(groupId ? 'group_updated' : 'chat_updated'));
+      }).catch(console.error);
+    }
+  }, [messages.length, activeConversation]);
 
   // Gửi tin nhắn
   // Gửi tin nhắn
@@ -281,9 +309,13 @@ const ChatWindow = ({ onOpenSidebar }) => {
           </div>
         )}
 
-        {messages.map((msg) => (
-          <MessageItem key={msg.id} message={msg} isOwn={msg.senderId === currentUser?.id} />
-        ))}
+        {messages.map((msg) => {
+          const readers = Object.entries(watermarks)
+            .filter(([uid, uData]) => uid !== String(currentUser?.id) && String(uData.lastReadMessageId) === String(msg.id))
+            .map(([uid, uData]) => uData);
+
+          return <MessageItem key={msg.id} message={msg} isOwn={msg.senderId === currentUser?.id} readers={readers} />;
+        })}
 
         {/* Typing indicator */}
         {typing.length > 0 && (
@@ -377,6 +409,16 @@ const ChatWindow = ({ onOpenSidebar }) => {
 
         <p className="text-[10px] text-slate-400 mt-1.5 ml-1">Enter để gửi · Shift+Enter xuống dòng</p>
       </div>
+
+      {/* Render Modal */}
+      {activeConversation.type === 'group' && (
+        <GroupMembersModal
+          isOpen={isGroupMembersModalOpen}
+          onClose={() => setIsGroupMembersModalOpen(false)}
+          groupId={activeConversation.id}
+          groupName={activeConversation.name}
+        />
+      )}
     </div>
   );
 };

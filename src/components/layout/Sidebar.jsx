@@ -47,14 +47,21 @@ const ConversationItem = ({ item, isActive, onClick }) => (
     </div>
 
     <div className="flex-1 min-w-0">
-      <p className="text-sm font-medium text-slate-900 truncate">{item.name}</p>
-      <p className="text-xs text-slate-500 truncate">{item.subtitle || 'Nhấn để chat'}</p>
+      <p className={`text-sm truncate ${item.unreadCount > 0 ? 'font-bold text-slate-900' : 'font-medium text-slate-900'}`}>{item.name}</p>
+      <p className={`text-xs truncate ${item.unreadCount > 0 ? 'font-semibold text-slate-800' : 'text-slate-500'}`}>{item.subtitle || 'Nhấn để chat'}</p>
     </div>
-    {item.time && (
-      <div className="text-[10px] text-slate-400 mb-auto mt-1 flex-shrink-0">
-        {item.time}
-      </div>
-    )}
+    <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-1">
+      {item.time && (
+        <div className={`text-[10px] ${item.unreadCount > 0 ? 'text-indigo-600 font-bold' : 'text-slate-400'}`}>
+          {item.time}
+        </div>
+      )}
+      {item.unreadCount > 0 && (
+        <div className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center shadow-sm border border-white">
+          {item.unreadCount > 99 ? '99+' : item.unreadCount}
+        </div>
+      )}
+    </div>
   </button>
 );
 
@@ -87,8 +94,8 @@ const Sidebar = ({ onItemClick }) => {
   const queryClient = useQueryClient();
   useEffect(() => {
     // Ép buộc React Query phải gọi lại API ngay cả khi trình duyệt không được focus
-    const handleChatUpdate = () => queryClient.refetchQueries({ queryKey: ['recent-chats'], type: 'active' });
-    const handleGroupUpdate = () => queryClient.refetchQueries({ queryKey: ['my-groups'], type: 'active' });
+    const handleChatUpdate = () => queryClient.refetchQueries({ queryKey: ['recent-chats'] });
+    const handleGroupUpdate = () => queryClient.refetchQueries({ queryKey: ['my-groups'] });
 
     window.addEventListener('chat_updated', handleChatUpdate);
     window.addEventListener('group_updated', handleGroupUpdate);
@@ -98,6 +105,17 @@ const Sidebar = ({ onItemClick }) => {
       window.removeEventListener('group_updated', handleGroupUpdate);
     };
   }, [queryClient]);
+
+  // Tự động chọn cuộc hội thoại đầu tiên nếu chưa chọn
+  useEffect(() => {
+    if (!activeConversation) {
+      if (activeTab === 'direct' && recentChats.length > 0) {
+        setActiveConversation({ type: 'direct', id: recentChats[0].id, name: recentChats[0].fullName });
+      } else if (activeTab === 'group' && groups.length > 0) {
+        setActiveConversation({ type: 'group', id: groups[0].id, name: groups[0].name });
+      }
+    }
+  }, [activeConversation, activeTab, recentChats, groups, setActiveConversation]);
 
   // Gọi API Tìm kiếm (khi gõ phím)
   const { data: searchResultsData, isFetching: isSearching } = useQuery({
@@ -235,6 +253,7 @@ const Sidebar = ({ onItemClick }) => {
                               subtitle: getSubtitle(chat.lastMessage, prefix),
                               isOnline: onlineUsers[chat.id],
                               time: chat.lastMessage?.createdAt ? formatTime(chat.lastMessage.createdAt) : null,
+                              unreadCount: chat.unreadCount || 0,
                             }}
                             isActive={activeConversation?.type === 'direct' && activeConversation?.id === chat.id}
                             onClick={() => handleSelectConversation('direct', chat.id, chat.fullName)}
@@ -275,6 +294,7 @@ const Sidebar = ({ onItemClick }) => {
                               name: group.name,
                               subtitle: getSubtitle(group.lastMessage, prefix),
                               time: group.lastMessage?.createdAt ? formatTime(group.lastMessage.createdAt) : null,
+                              unreadCount: group.unreadCount || 0,
                             }}
                             isActive={activeConversation?.type === 'group' && activeConversation?.id === group.id}
                             onClick={() => handleSelectConversation('group', group.id, group.name)}

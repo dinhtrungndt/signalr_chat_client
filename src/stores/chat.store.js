@@ -5,6 +5,7 @@ const useChatStore = create((set, get) => ({
   messages: {}, // { "direct_1": [...], "group_2": [...] }
   typingUsers: {}, // { "direct_1": [...userIds] }
   onlineUsers: {}, // { [userId]: boolean } // Trạng thái online của user
+  watermarks: {}, // { "group_2": { "userId": lastReadMessageId } } // Mốc đã đọc của các thành viên
 
   setOnlineStatus: (userId, isOnline) => set((state) => ({
     onlineUsers: {
@@ -60,11 +61,28 @@ const useChatStore = create((set, get) => ({
     const key = `${type}_${id}`;
     set((state) => {
       const current = state.typingUsers[key] || [];
-      const updated = isTyping
-        ? [...new Set([...current, userId])]
-        : current.filter((u) => u !== userId);
-      return { typingUsers: { ...state.typingUsers, [key]: updated } };
+      if (isTyping && !current.includes(userId)) {
+        return { typingUsers: { ...state.typingUsers, [key]: [...current, userId] } };
+      }
+      if (!isTyping && current.includes(userId)) {
+        return { typingUsers: { ...state.typingUsers, [key]: current.filter((u) => u !== userId) } };
+      }
+      return state;
     });
+  },
+
+  // Đánh dấu đã xem
+  setWatermark: (type, id, user, lastReadMessageId) => {
+    const key = `${type}_${id}`;
+    set((state) => ({
+      watermarks: {
+        ...state.watermarks,
+        [key]: {
+          ...(state.watermarks[key] || {}),
+          [user.userId]: { ...user, lastReadMessageId }
+        }
+      }
+    }));
   },
 
   // Xóa toàn bộ dữ liệu khi đăng xuất

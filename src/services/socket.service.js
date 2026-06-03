@@ -73,6 +73,42 @@ const socketService = {
       window.dispatchEvent(new Event('group_updated'));
     });
 
+    socket.on('removedFromGroup', ({ groupId }) => {
+      // Báo server rời phòng này
+      socket.emit('leaveGroupRoom', groupId);
+      
+      // Xoá cuộc hội thoại hiện tại nếu đang mở nhóm đó
+      const activeConversation = useChatStore.getState().activeConversation;
+      if (activeConversation?.type === 'group' && activeConversation?.id === groupId) {
+        useChatStore.getState().setActiveConversation(null);
+      }
+      
+      // Báo UI tải lại danh sách nhóm
+      window.dispatchEvent(new Event('group_updated'));
+    });
+
+    socket.on('group_member_added', ({ groupId }) => {
+      window.dispatchEvent(new CustomEvent('group_members_updated', { detail: { groupId } }));
+    });
+
+    socket.on('group_member_removed', ({ groupId }) => {
+      window.dispatchEvent(new CustomEvent('group_members_updated', { detail: { groupId } }));
+    });
+
+    // ==========================================
+    // SỰ KIỆN ĐÃ ĐỌC (WATERMARK)
+    // ==========================================
+    socket.on('message_read', (data) => {
+      const { groupId, partnerId, lastReadMessageId, user } = data;
+      const { setWatermark } = useChatStore.getState();
+      
+      if (groupId) {
+        setWatermark('group', groupId, user, lastReadMessageId);
+      } else if (partnerId) {
+        setWatermark('direct', partnerId, user, lastReadMessageId);
+      }
+    });
+
     // ==========================================
     // ONLINE/OFFLINE
     // ==========================================
@@ -111,6 +147,17 @@ const socketService = {
           resolve(res.data);
           window.dispatchEvent(new Event('chat_updated')); // Báo cho Sidebar cập nhật
         }
+        else reject(new Error(res.error));
+      });
+    });
+  },
+
+  // Đánh dấu đã đọc
+  markRead: (groupId, partnerId, lastReadMessageId) => {
+    return new Promise((resolve, reject) => {
+      if (!socket) return resolve(); // Bỏ qua nếu chưa kết nối
+      socket.emit('mark_read', { groupId, partnerId, lastReadMessageId }, (res) => {
+        if (res.success) resolve(res.data);
         else reject(new Error(res.error));
       });
     });
