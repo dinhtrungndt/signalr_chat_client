@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import groupApi from '../../api/group.api';
 import userApi from '../../api/user.api';
 import useDebounce from '../../hooks/useDebounce';
@@ -25,45 +25,111 @@ const getSubtitle = (lastMessage, prefix) => {
   return prefix ? `${prefix}: ${text}` : text;
 };
 
-const ConversationItem = ({ item, isActive, onClick }) => (
-  <button
-    onClick={onClick}
-    className={[
-      'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left',
-      'transition-all duration-150 border',
-      isActive
-        ? 'bg-indigo-50 border-indigo-200'
-        : 'bg-transparent border-transparent hover:bg-slate-100',
-    ].join(' ')}
-  >
-    {/* Avatar */}
-    <div className="relative">
-      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-        {item.name?.charAt(0)?.toUpperCase() || '?'}
-      </div>
-      {item.isOnline !== undefined && (
-        <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${item.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-      )}
-    </div>
+const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClick }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
-    <div className="flex-1 min-w-0">
-      <p className={`text-sm truncate ${item.unreadCount > 0 ? 'font-bold text-slate-900' : 'font-medium text-slate-900'}`}>{item.name}</p>
-      <p className={`text-xs truncate ${item.unreadCount > 0 ? 'font-semibold text-slate-800' : 'text-slate-500'}`}>{item.subtitle || 'Nhấn để chat'}</p>
-    </div>
-    <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-1">
-      {item.time && (
-        <div className={`text-[10px] ${item.unreadCount > 0 ? 'text-indigo-600 font-bold' : 'text-slate-400'}`}>
-          {item.time}
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMenuOpen]);
+
+  return (
+    <div className="relative group">
+      <button
+        onClick={onClick}
+        className={[
+          'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left',
+          'transition-all duration-150 border',
+          isActive
+            ? 'bg-indigo-50 border-indigo-200'
+            : 'bg-transparent border-transparent hover:bg-slate-100',
+        ].join(' ')}
+      >
+        {/* Avatar */}
+        <div className="relative">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+            {item.name?.charAt(0)?.toUpperCase() || '?'}
+          </div>
+          {item.isOnline !== undefined && (
+            <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${item.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+          )}
         </div>
-      )}
-      {item.unreadCount > 0 && (
-        <div className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center shadow-sm border border-white">
-          {item.unreadCount > 99 ? '99+' : item.unreadCount}
+
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm truncate ${item.unreadCount > 0 ? 'font-bold text-slate-900' : 'font-medium text-slate-900'}`}>{item.name}</p>
+          <p className={`text-xs truncate ${item.unreadCount > 0 ? 'font-semibold text-slate-800' : 'text-slate-500'}`}>{item.subtitle || 'Nhấn để chat'}</p>
         </div>
-      )}
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-1">
+          {item.time && (
+            <div className={`text-[10px] flex items-center gap-1 ${item.unreadCount > 0 ? 'text-indigo-600 font-bold' : 'text-slate-400'}`}>
+              {isPinned && (
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                </svg>
+              )}
+              {item.time}
+            </div>
+          )}
+          {item.unreadCount > 0 && (
+            <div className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center shadow-sm border border-white">
+              {item.unreadCount > 99 ? '99+' : item.unreadCount}
+            </div>
+          )}
+        </div>
+        
+        {onTogglePin && (
+          <div className={`relative flex items-center -mr-1 ${isMenuOpen ? 'opacity-100 z-10' : 'opacity-100 sm:opacity-0 group-hover:opacity-100'} transition-opacity`} ref={menuRef}>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
+              className={`p-1 rounded-full shadow-sm transition-colors ${isMenuOpen ? 'bg-slate-200 text-slate-700' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-700 bg-transparent'}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+              </svg>
+            </button>
+
+            {isMenuOpen && (
+              <div className="absolute right-0 mt-8 w-44 bg-white rounded-xl shadow-lg border border-slate-100 py-1.5 z-50 overflow-hidden">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMenuOpen(false);
+                    onTogglePin();
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition flex items-center gap-2.5"
+                >
+                  {isPinned ? (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" />
+                      </svg>
+                      <span className="font-medium text-amber-600">Bỏ ghim hội thoại</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                      <span className="font-medium">Ghim hội thoại</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </button>
     </div>
-  </button>
-);
+  );
+};
 
 const Sidebar = ({ onItemClick }) => {
   const user = useAuthStore((s) => s.user);
@@ -92,6 +158,50 @@ const Sidebar = ({ onItemClick }) => {
   const recentChats = recentChatsData || [];
 
   const queryClient = useQueryClient();
+
+  // Gọi API lấy Pinned Conversations
+  const { data: pinnedConversationsData } = useQuery({
+    queryKey: ['pinned-conversations'],
+    queryFn: () => userApi.getPinnedConversations().then((r) => r.data.data),
+  });
+  const pinnedConversations = pinnedConversationsData || [];
+
+  const handleTogglePin = async (type, id) => {
+    const isPinned = pinnedConversations.some(p => p.type === type.toUpperCase() && p.entityId === id);
+    try {
+      if (isPinned) {
+        await userApi.unpinConversation(type.toUpperCase(), id);
+      } else {
+        await userApi.pinConversation(type.toUpperCase(), id);
+      }
+      queryClient.invalidateQueries(['pinned-conversations']);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  };
+
+  const sortedChats = useMemo(() => {
+    const pinned = [];
+    const normal = [];
+    recentChats.forEach(chat => {
+      const isPinned = pinnedConversations.some(p => p.type === 'DIRECT' && p.entityId === chat.id);
+      if (isPinned) pinned.push({ ...chat, isPinned });
+      else normal.push(chat);
+    });
+    return [...pinned, ...normal];
+  }, [recentChats, pinnedConversations]);
+
+  const sortedGroups = useMemo(() => {
+    const pinned = [];
+    const normal = [];
+    groups.forEach(group => {
+      const isPinned = pinnedConversations.some(p => p.type === 'GROUP' && p.entityId === group.id);
+      if (isPinned) pinned.push({ ...group, isPinned });
+      else normal.push(group);
+    });
+    return [...pinned, ...normal];
+  }, [groups, pinnedConversations]);
+
   useEffect(() => {
     // Ép buộc React Query phải gọi lại API ngay cả khi trình duyệt không được focus
     const handleChatUpdate = () => queryClient.refetchQueries({ queryKey: ['recent-chats'] });
@@ -250,7 +360,7 @@ const Sidebar = ({ onItemClick }) => {
                     <div className="text-center py-4 text-sm text-slate-500 italic">Chưa có tin nhắn</div>
                   ) : (
                     <div className="space-y-1">
-                      {recentChats.map((chat) => {
+                      {sortedChats.map((chat) => {
                         const prefix = chat.lastMessage?.isMine ? 'Bạn' : chat.fullName.split(' ').pop();
                         return (
                           <ConversationItem
@@ -264,6 +374,8 @@ const Sidebar = ({ onItemClick }) => {
                               unreadCount: chat.unreadCount || 0,
                             }}
                             isActive={activeConversation?.type === 'direct' && activeConversation?.id === chat.id}
+                            isPinned={chat.isPinned}
+                            onTogglePin={() => handleTogglePin('direct', chat.id)}
                             onClick={() => handleSelectConversation('direct', chat.id, chat.fullName)}
                           />
                         );
@@ -292,7 +404,7 @@ const Sidebar = ({ onItemClick }) => {
                     <div className="text-center py-4 text-sm text-slate-500 italic">Chưa tham gia nhóm nào</div>
                   ) : (
                     <div className="space-y-1">
-                      {groups.map((group) => {
+                      {sortedGroups.map((group) => {
                         const prefix = group.lastMessage?.senderName ? group.lastMessage.senderName.split(' ').pop() : '';
                         return (
                           <ConversationItem
@@ -305,6 +417,8 @@ const Sidebar = ({ onItemClick }) => {
                               unreadCount: group.unreadCount || 0,
                             }}
                             isActive={activeConversation?.type === 'group' && activeConversation?.id === group.id}
+                            isPinned={group.isPinned}
+                            onTogglePin={() => handleTogglePin('group', group.id)}
                             onClick={() => handleSelectConversation('group', group.id, group.name, group.role, group.isReadOnly, group.memberCount)}
                           />
                         );
