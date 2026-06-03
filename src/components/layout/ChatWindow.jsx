@@ -193,7 +193,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onImageClick }
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
 
-const ChatWindow = ({ onOpenSidebar }) => {
+const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const activeConversation = useChatStore((s) => s.activeConversation);
   const onlineUsers = useChatStore((s) => s.onlineUsers);
   const conversationKey = activeConversation ? `${activeConversation.type}_${activeConversation.id}` : null;
@@ -437,18 +437,16 @@ const ChatWindow = ({ onOpenSidebar }) => {
           </p>
         </div>
 
-        {/* Nút xem thông tin nhóm */}
-        {activeConversation.type === 'group' && (
-          <button
-            onClick={() => setIsGroupMembersModalOpen(true)}
-            title="Xem thành viên"
-            className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition ml-auto"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </button>
-        )}
+        {/* Nút xem thông tin hội thoại (Right Sidebar) */}
+        <button
+          onClick={onToggleRightSidebar}
+          title="Thông tin hội thoại"
+          className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition ml-auto"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
       </div>
 
       {/* Group Members Modal */}

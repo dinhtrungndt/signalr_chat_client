@@ -9,6 +9,12 @@ const messageApi = {
     
   recallMessage: (messageId) =>
     axiosClient.put(`/messages/${messageId}/recall`),
+    
+  getMedia: (params) =>
+    axiosClient.get('/messages/media', { params }),
+    
+  searchMessages: (params) =>
+    axiosClient.get('/messages/search', { params }),
 };
 
 export default messageApi;
