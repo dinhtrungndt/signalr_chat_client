@@ -17,7 +17,7 @@ const formatTime = (dateStr) => {
   }
 };
 
-const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImageClick }) => {
+const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImageClick, isFirstInGroup = true, isLastInGroup = true }) => {
   if (message.type === 'SYSTEM') {
     let content = message.content;
     let isSilent = false;
@@ -38,12 +38,16 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
   }
 
   return (
-    <div className={`flex items-end gap-2 mb-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex items-end gap-2 ${isLastInGroup ? 'mb-3' : 'mb-1'} ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
     {/* Avatar người gửi (chỉ hiện khi không phải mình) */}
     {!isOwn && (
-      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-        {message.sender?.fullName?.charAt(0) || '?'}
-      </div>
+      isLastInGroup ? (
+        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+          {message.sender?.fullName?.charAt(0) || '?'}
+        </div>
+      ) : (
+        <div className="w-7 h-7 flex-shrink-0"></div>
+      )
     )}
 
     <div className="max-w-[78%] sm:max-w-[70%] group relative" id={`msg-${message.id}`}>
@@ -94,7 +98,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
       </div>
 
       {/* Tên người gửi (chỉ hiện với group chat, không phải mình) */}
-      {!isOwn && message.groupId && (
+      {!isOwn && message.groupId && isFirstInGroup && (
         <p className="text-xs text-slate-500 mb-1 ml-1">{message.sender?.fullName}</p>
       )}
 
@@ -176,14 +180,16 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
         )}
       </div>
 
-      <p
-        className={[
-          'text-[10px] text-slate-400 mt-1',
-          isOwn ? 'text-right mr-1' : 'ml-1',
-        ].join(' ')}
-      >
-        {formatTime(message.createdAt)}
-      </p>
+      {isLastInGroup && (
+        <p
+          className={[
+            'text-[10px] text-slate-400 mt-1',
+            isOwn ? 'text-right mr-1' : 'ml-1',
+          ].join(' ')}
+        >
+          {formatTime(message.createdAt)}
+        </p>
+      )}
 
       {/* Read Receipts */}
       {readers?.length > 0 && (
@@ -599,12 +605,38 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
           </div>
         )}
 
-        {messages.map((msg) => {
+        {messages.map((msg, index) => {
+          const prevMsg = messages[index - 1];
+          const nextMsg = messages[index + 1];
+
+          // Điều kiện gộp tin nhắn (cùng người gửi, không phải tin hệ thống, cách nhau dưới 5 phút)
+          const isSameSenderAsPrev = prevMsg && prevMsg.senderId === msg.senderId && prevMsg.type !== 'SYSTEM';
+          const isSameSenderAsNext = nextMsg && nextMsg.senderId === msg.senderId && nextMsg.type !== 'SYSTEM';
+
+          const isTimeCloseToPrev = prevMsg && (new Date(msg.createdAt) - new Date(prevMsg.createdAt) < 5 * 60 * 1000);
+          const isTimeCloseToNext = nextMsg && (new Date(nextMsg.createdAt) - new Date(msg.createdAt) < 5 * 60 * 1000);
+
+          const isFirstInGroup = !(isSameSenderAsPrev && isTimeCloseToPrev);
+          const isLastInGroup = !(isSameSenderAsNext && isTimeCloseToNext);
+
           const readers = Object.entries(watermarks)
             .filter(([uid, uData]) => uid !== String(currentUser?.id) && String(uData.lastReadMessageId) === String(msg.id))
             .map(([uid, uData]) => uData);
 
-          return <MessageItem key={msg.id} message={msg} isOwn={msg.senderId === currentUser?.id} readers={readers} isAdmin={activeConversation?.role === 'ADMIN' || activeConversation?.role === 'DEPUTY'} onReply={setReplyingTo} onPin={handlePinMessage} onImageClick={setPreviewImage} />;
+          return (
+            <MessageItem 
+              key={msg.id} 
+              message={msg} 
+              isOwn={msg.senderId === currentUser?.id} 
+              readers={readers} 
+              isAdmin={activeConversation?.role === 'ADMIN' || activeConversation?.role === 'DEPUTY'} 
+              onReply={setReplyingTo} 
+              onPin={handlePinMessage} 
+              onImageClick={setPreviewImage} 
+              isFirstInGroup={isFirstInGroup}
+              isLastInGroup={isLastInGroup}
+            />
+          );
         })}
 
         {/* Typing indicator */}
