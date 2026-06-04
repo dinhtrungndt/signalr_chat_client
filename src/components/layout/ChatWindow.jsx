@@ -721,10 +721,10 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
               </svg>
               <div className="flex flex-col min-w-0 flex-1">
-                <p className="text-[10px] font-semibold text-amber-600">
+                <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-500">
                   Tin ghim ({pinnedMessages.length}/5)
                 </p>
-                <p className="text-xs text-slate-700 truncate hover:text-indigo-600 transition">
+                <p className="text-xs text-slate-700 dark:text-slate-300 truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition">
                   {pinnedMessages[0].message?.type === 'TEXT' ? pinnedMessages[0].message?.content : (pinnedMessages[0].message?.type === 'IMAGE' ? '[Hình ảnh]' : '[Tập tin]')}
                 </p>
               </div>
@@ -749,14 +749,14 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                       const el = document.getElementById(`msg-${pin.messageId}`);
                       if (el) {
                         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        el.classList.add('bg-amber-100', 'transition-colors', 'duration-1000');
-                        setTimeout(() => el.classList.remove('bg-amber-100'), 1500);
+                        el.classList.add('bg-amber-100', 'dark:bg-amber-900/30', 'transition-colors', 'duration-1000');
+                        setTimeout(() => el.classList.remove('bg-amber-100', 'dark:bg-amber-900/30'), 1500);
                         setIsPinnedDropdownOpen(false);
                       }
                     }}
                   >
-                    <p className="text-xs font-semibold text-slate-800 mb-0.5">{pin.message?.sender?.fullName}</p>
-                    <p className="text-sm text-slate-600 line-clamp-2">
+                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 mb-0.5">{pin.message?.sender?.fullName}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
                       {pin.message?.type === 'TEXT' ? pin.message?.content : (pin.message?.type === 'IMAGE' ? '[Hình ảnh]' : '[Tập tin]')}
                     </p>
                   </div>

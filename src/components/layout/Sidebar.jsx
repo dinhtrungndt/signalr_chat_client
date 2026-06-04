@@ -191,7 +191,7 @@ const Sidebar = ({ onItemClick }) => {
   const pinnedConversations = pinnedConversationsData || [];
 
   const handleTogglePin = async (type, id) => {
-    const isPinned = pinnedConversations.some(p => p.type === type.toUpperCase() && p.entityId === id);
+    const isPinned = pinnedConversations.some(p => String(p.type).toUpperCase() === String(type).toUpperCase() && Number(p.entityId) === Number(id));
     try {
       if (isPinned) {
         await userApi.unpinConversation(type.toUpperCase(), id);
@@ -208,7 +208,7 @@ const Sidebar = ({ onItemClick }) => {
     const pinned = [];
     const normal = [];
     recentChats.forEach(chat => {
-      const isPinned = pinnedConversations.some(p => p.type === 'DIRECT' && p.entityId === chat.id);
+      const isPinned = pinnedConversations.some(p => String(p.type).toUpperCase() === 'DIRECT' && Number(p.entityId) === Number(chat.id));
       if (isPinned) pinned.push({ ...chat, isPinned });
       else normal.push(chat);
     });
@@ -219,7 +219,7 @@ const Sidebar = ({ onItemClick }) => {
     const pinned = [];
     const normal = [];
     groups.forEach(group => {
-      const isPinned = pinnedConversations.some(p => p.type === 'GROUP' && p.entityId === group.id);
+      const isPinned = pinnedConversations.some(p => String(p.type).toUpperCase() === 'GROUP' && Number(p.entityId) === Number(group.id));
       if (isPinned) pinned.push({ ...group, isPinned });
       else normal.push(group);
     });
