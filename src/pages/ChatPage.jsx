@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import ChatWindow from '../components/layout/ChatWindow';
 import Sidebar from '../components/layout/Sidebar';
@@ -13,13 +13,60 @@ const ChatPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false); // Ở màn hình rộng, mặc định có thể mở hoặc đóng tuỳ ý. Mặc định đóng cho gọn.
 
+  const touchStart = useRef(null);
+  const touchEnd = useRef(null);
+
+  const handleTouchStart = (e) => {
+    touchEnd.current = null;
+    touchStart.current = { x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY };
+  };
+
+  const handleTouchMove = (e) => {
+    touchEnd.current = { x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY };
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart.current || !touchEnd.current) return;
+    const distanceX = touchStart.current.x - touchEnd.current.x;
+    const distanceY = touchStart.current.y - touchEnd.current.y;
+    
+    // Bỏ qua nếu vuốt dọc (scroll) nhiều hơn vuốt ngang
+    if (Math.abs(distanceY) > Math.abs(distanceX)) return;
+
+    const isLeftSwipe = distanceX > 50;
+    const isRightSwipe = distanceX < -50;
+
+    // Vuốt sang phải từ mép trái màn hình (< 40px)
+    if (isRightSwipe && touchStart.current.x < 40) {
+      setSidebarOpen(true);
+    }
+    // Đóng menu trái
+    if (isLeftSwipe && sidebarOpen) {
+      setSidebarOpen(false);
+    }
+    
+    // Vuốt sang trái từ mép phải màn hình
+    if (isLeftSwipe && touchStart.current.x > window.innerWidth - 40 && activeConversation) {
+      setRightSidebarOpen(true);
+    }
+    // Đóng menu phải
+    if (isRightSwipe && rightSidebarOpen) {
+      setRightSidebarOpen(false);
+    }
+  };
+
   useEffect(() => {
     socketService.connect();
     return () => socketService.disconnect();
   }, []);
 
   return (
-    <div className="h-screen overflow-hidden">
+    <div 
+      className="h-screen overflow-hidden"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <Helmet>
         <title>Tin nhắn | DVN Chat</title>
         <meta name="description" content="Nhắn tin nhóm và trực tiếp tốc độ cao với DVN Chat." />
