@@ -9,6 +9,9 @@ const messageApi = {
     
   recallMessage: (messageId) =>
     axiosClient.put(`/messages/${messageId}/recall`),
+
+  editMessage: (messageId, content) =>
+    axiosClient.put(`/messages/${messageId}/edit`, { content }),
     
   deleteForMe: (messageId) =>
     axiosClient.delete(`/messages/${messageId}/for-me`),

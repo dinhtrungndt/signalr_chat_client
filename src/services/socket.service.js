@@ -171,6 +171,19 @@ const socketService = {
     });
 
     // ==========================================
+    // SỰ KIỆN CHỈNH SỬA TIN NHẮN
+    // ==========================================
+    socket.on('message_edited', (data) => {
+      // data = { messageId, groupId, partnerId, newContent }
+      if (data.groupId) {
+        useChatStore.getState().updateMessage('group', data.groupId, data.messageId, { content: data.newContent, isEdited: true });
+      } else if (data.partnerId) {
+        useChatStore.getState().updateMessage('direct', data.partnerId, data.messageId, { content: data.newContent, isEdited: true });
+      }
+      window.dispatchEvent(new CustomEvent('message_edited', { detail: data }));
+    });
+
+    // ==========================================
     // SỰ KIỆN GHIM TIN NHẮN
     // ==========================================
     socket.on('message_pinned', (pin) => {

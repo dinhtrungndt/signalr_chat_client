@@ -56,14 +56,31 @@ const renderTextWithLinks = (text) => {
 
 const MessageItem = ({ 
   message, isOwn, readers, isAdmin, 
-  onReply, onPin, onShare, onImageClick, onReact, onShowReactions, onShowReaders, onDeleteForMe, 
+  onReply, onPin, onShare, onEdit, onImageClick, onReact, onShowReactions, onShowReaders, onDeleteForMe, 
   isFirstInGroup = true, isLastInGroup = true,
   isSelectionMode = false, isSelected = false, onToggleSelect = null, onEnableSelectionMode = null, isDraggingSelection = false
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const [dropdownPos, setDropdownPos] = useState('bottom');
+  const [isReactOpen, setIsReactOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const countdownIntervalRef = useRef(null);
+  const reactRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (reactRef.current && !reactRef.current.contains(event.target)) {
+        setIsReactOpen(false);
+      }
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleMenuEnter = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -207,8 +224,13 @@ const MessageItem = ({
 
         {/* Nút Thả cảm xúc */}
         {message.type !== 'RECALLED' && (
-          <div className="relative group/react" onMouseEnter={handleMenuEnter}>
+          <div className="relative group/react" ref={reactRef}>
             <button
+              onClick={(e) => {
+                handleMenuEnter(e);
+                setIsReactOpen(!isReactOpen);
+                setIsMenuOpen(false);
+              }}
               className="p-1 text-slate-400 hover:text-pink-500 hover:bg-pink-50 dark:hover:bg-pink-900/30 rounded-full"
               title="Thả cảm xúc"
             >
@@ -217,7 +239,7 @@ const MessageItem = ({
               </svg>
             </button>
             {/* Glassmorphism Reaction Picker */}
-            <div className={`absolute ${dropdownPos === 'top' ? 'bottom-full pb-1' : 'top-full pt-1'} ${isOwn ? 'right-0' : 'left-0'} hidden group-hover/react:block z-[999] animate-fade-in w-max`}>
+            <div className={`absolute ${dropdownPos === 'top' ? 'bottom-full pb-1' : 'top-full pt-1'} ${isOwn ? 'right-0' : 'left-0'} ${isReactOpen ? 'block' : 'hidden'} z-[999] animate-fade-in w-max`}>
               <div className="grid grid-cols-3 gap-1 p-1.5 bg-white/80 dark:bg-slate-800/90 backdrop-blur-md border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-xl">
                 {EMOJIS.map(emoji => (
                   <button
@@ -235,14 +257,22 @@ const MessageItem = ({
         )}
 
         {/* Menu 3 Chấm */}
-        <div className="relative group/more" onMouseEnter={handleMenuEnter}>
-          <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors" title="Thêm tùy chọn">
+        <div className="relative group/more" ref={menuRef}>
+          <button 
+            onClick={(e) => {
+              handleMenuEnter(e);
+              setIsMenuOpen(!isMenuOpen);
+              setIsReactOpen(false);
+            }}
+            className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors" 
+            title="Thêm tùy chọn"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
             </svg>
           </button>
           {/* Dropdown Box */}
-          <div className={`absolute ${dropdownPos === 'top' ? 'bottom-full pb-1' : 'top-full pt-1'} ${isOwn ? 'right-0' : 'left-0'} hidden group-hover/more:block z-[999] animate-fade-in w-max`}>
+          <div className={`absolute ${dropdownPos === 'top' ? 'bottom-full pb-1' : 'top-full pt-1'} ${isOwn ? 'right-0' : 'left-0'} ${isMenuOpen ? 'block' : 'hidden'} z-[999] animate-fade-in w-max`}>
             <div className="bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden py-1.5 w-40 flex flex-col">
               <button 
                 onClick={() => navigator.clipboard.writeText(message.type === 'TEXT' ? message.content : 'Tin nhắn')} 
@@ -250,6 +280,15 @@ const MessageItem = ({
               >
                 Copy tin nhắn
               </button>
+              {isOwn && message.type === 'TEXT' && (
+                <button
+                  onClick={() => onEdit && onEdit(message)}
+                  className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  Chỉnh sửa
+                </button>
+              )}
               {message.type !== 'RECALLED' && (
                 <>
                   <button 
@@ -407,6 +446,7 @@ const MessageItem = ({
             isOwn ? 'text-right mr-1' : 'ml-1',
           ].join(' ')}
         >
+          {message.isEdited && <span className="mr-1 italic opacity-80">(Đã chỉnh sửa)</span>}
           {formatTime(message.createdAt)}
         </p>
       )}
@@ -463,6 +503,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [messagesToShare, setMessagesToShare] = useState([]);
   const [isPinnedDropdownOpen, setIsPinnedDropdownOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(null);
   const [pendingFiles, setPendingFiles] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
   const [reactionsToShow, setReactionsToShow] = useState(null);
@@ -590,6 +631,20 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
     if ((!content && pendingFiles.length === 0) || isSending) return;
 
     setIsSending(true);
+
+    if (editingMessage) {
+      try {
+        await messageApi.editMessage(editingMessage.id, content);
+        setEditingMessage(null);
+        setInputText('');
+      } catch (err) {
+        console.error(err);
+        useUIStore.getState().showAlert('Chỉnh sửa tin nhắn thất bại!', 'error');
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
     
     const replyToId = replyingTo ? replyingTo.id : null;
 
@@ -1167,6 +1222,11 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                 setMessagesToShare([msg]);
                 setIsShareModalOpen(true);
               }}
+              onEdit={(msg) => {
+                setEditingMessage(msg);
+                setInputText(msg.type === 'TEXT' ? msg.content : '');
+                setReplyingTo(null);
+              }}
               onImageClick={setPreviewImage} 
               onShowReactions={setReactionsToShow}
               onShowReaders={setReadersToShow}
@@ -1326,6 +1386,28 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                     type="button"
                     onClick={() => setReplyingTo(null)}
                     className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              {/* Thanh Preview Chỉnh Sửa */}
+              {editingMessage && (
+                <div className="flex items-start justify-between px-4 pt-3 pb-2 border-b border-slate-200 dark:border-slate-700 bg-amber-50/50 dark:bg-amber-900/10">
+                  <div className="flex flex-col min-w-0 pr-2">
+                    <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 mb-0.5">
+                      Đang chỉnh sửa tin nhắn
+                    </span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      {editingMessage.type === 'TEXT' ? editingMessage.content : '[Hình ảnh]'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingMessage(null); setInputText(''); }}
+                    className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-full transition-colors flex-shrink-0"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
