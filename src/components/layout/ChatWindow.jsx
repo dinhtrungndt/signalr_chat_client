@@ -53,29 +53,46 @@ const renderTextWithLinks = (text) => {
 
 const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImageClick, onReact, onShowReactions, onDeleteForMe, isFirstInGroup = true, isLastInGroup = true }) => {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteTimeout, setDeleteTimeout] = useState(null);
+  const [countdown, setCountdown] = useState(5);
+  const countdownIntervalRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+    };
+  }, []);
 
   const handleDeleteForMe = () => {
     setIsDeleting(true);
-    useUIStore.getState().showToast('Tin nhắn sẽ bị xóa ở phía bạn trong 5s...', 'warning');
-    const timeout = setTimeout(() => {
-      onDeleteForMe(message.id);
-    }, 5000);
-    setDeleteTimeout(timeout);
+    setCountdown(5);
+    
+    countdownIntervalRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownIntervalRef.current);
+          onDeleteForMe(message.id);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   };
 
   const handleUndoDelete = () => {
-    clearTimeout(deleteTimeout);
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+    }
     setIsDeleting(false);
-    setDeleteTimeout(null);
-    useUIStore.getState().showToast('Đã hủy xóa tin nhắn.', 'info');
+    setCountdown(5);
   };
 
   if (isDeleting) {
     return (
       <div className="flex justify-center w-full my-2 animate-fade-in">
         <span className="text-xs font-medium bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 px-4 py-2 rounded-full flex items-center gap-3 shadow-sm">
-          Tin nhắn sẽ bị xóa ở phía bạn...
+          Tin nhắn sẽ bị xóa ở phía bạn trong <span className="font-bold text-red-500">{countdown}s</span>...
           <button onClick={handleUndoDelete} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-bold hover:underline">
             Hoàn tác
           </button>
