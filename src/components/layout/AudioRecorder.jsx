@@ -84,7 +84,7 @@ const AudioRecorder = ({ onSend, onCancel }) => {
   }, []);
 
   return (
-    <div className="flex-1 flex items-center justify-between bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 min-h-[44px]">
+    <div className="flex-1 flex items-center justify-between bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2 min-h-[44px]">
       <div className="flex items-center gap-3">
         {/* Pulsating dot */}
         <div className="relative flex h-3 w-3">
@@ -94,13 +94,13 @@ const AudioRecorder = ({ onSend, onCancel }) => {
         <span className="text-red-500 font-medium font-mono">
           {formatTime(recordingTime)}
         </span>
-        <span className="text-sm text-slate-500 ml-2 animate-pulse">Đang ghi âm...</span>
+        <span className="text-sm text-slate-500 dark:text-slate-400 ml-2 animate-pulse">Đang ghi âm...</span>
       </div>
 
       <div className="flex items-center gap-2">
         <button
           onClick={cancelRecording}
-          className="px-3 py-1.5 text-sm text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition font-medium"
+          className="px-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition font-medium"
         >
           Huỷ
         </button>

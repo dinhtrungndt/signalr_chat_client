@@ -91,12 +91,12 @@ const ProfileModal = ({ isOpen, onClose }) => {
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity">
       <div 
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up"
+        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up border border-slate-200 dark:border-slate-700"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <h2 className="text-lg font-bold text-slate-800">Thông tin tài khoản</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-white">Thông tin tài khoản</h2>
           <button 
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 transition-colors"
@@ -110,7 +110,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
         {/* Body */}
         <form onSubmit={handleSubmit} className="px-6 py-6">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl">
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-xl">
               {error}
             </div>
           )}
@@ -122,10 +122,10 @@ const ProfileModal = ({ isOpen, onClose }) => {
                 <img 
                   src={avatarPreview} 
                   alt="Avatar" 
-                  className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md group-hover:opacity-80 transition"
+                  className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-md group-hover:opacity-80 transition"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-3xl font-bold shadow-md group-hover:opacity-80 transition">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-3xl font-bold shadow-md group-hover:opacity-80 transition border-4 border-white dark:border-slate-800">
                   {user?.fullName?.charAt(0)?.toUpperCase()}
                 </div>
               )}
@@ -133,7 +133,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 w-8 h-8 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-600 shadow-sm hover:text-indigo-600 hover:border-indigo-200 transition"
+                className="absolute bottom-0 right-0 w-8 h-8 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 shadow-sm hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-500/50 transition"
                 title="Thay đổi ảnh đại diện"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -155,37 +155,37 @@ const ProfileModal = ({ isOpen, onClose }) => {
           <div className="space-y-4">
             {/* Full Name */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Tên hiển thị</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tên hiển thị</label>
               <input 
                 type="text" 
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-slate-900 dark:text-white"
                 placeholder="Nhập tên của bạn"
               />
             </div>
 
-            <div className="pt-4 border-t border-slate-100">
-              <p className="text-sm font-semibold text-slate-800 mb-3">Đổi mật khẩu (không bắt buộc)</p>
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+              <p className="text-sm font-semibold text-slate-800 dark:text-white mb-3">Đổi mật khẩu (không bắt buộc)</p>
               
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Mật khẩu cũ</label>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Mật khẩu cũ</label>
                   <input 
                     type="password" 
                     value={oldPassword}
                     onChange={(e) => setOldPassword(e.target.value)}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm"
+                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm text-slate-900 dark:text-white placeholder-slate-400"
                     placeholder="••••••••"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Mật khẩu mới</label>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Mật khẩu mới</label>
                   <input 
                     type="password" 
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm"
+                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm text-slate-900 dark:text-white placeholder-slate-400"
                     placeholder="••••••••"
                   />
                 </div>
@@ -199,7 +199,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1 py-2.5 rounded-xl font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition"
+              className="flex-1 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
             >
               Hủy
             </button>

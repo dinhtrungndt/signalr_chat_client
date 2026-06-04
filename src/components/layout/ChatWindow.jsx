@@ -63,7 +63,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
 
     return (
       <div className="flex justify-center w-full my-4">
-        <span className="text-xs font-medium bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full text-center max-w-[85%] break-words">
+        <span className="text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-4 py-1.5 rounded-full text-center max-w-[85%] break-words">
           {content} {isSilent && <span className="ml-1 opacity-70 italic">(Âm thầm)</span>}
         </span>
       </div>
@@ -136,7 +136,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
         {message.type !== 'RECALLED' && (
           <div className="relative group/react">
             <button
-              className="p-1 text-slate-400 hover:text-pink-500 hover:bg-pink-50 rounded-full"
+              className="p-1 text-slate-400 hover:text-pink-500 hover:bg-pink-50 dark:hover:bg-pink-900/30 rounded-full"
               title="Thả cảm xúc"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -145,7 +145,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
             </button>
             {/* Glassmorphism Reaction Picker (đã đổi sang bottom-full để bật lên trên) */}
             <div className="absolute bottom-full right-0 pb-1 hidden group-hover/react:block z-50 animate-fade-in-up w-max">
-              <div className="flex items-center gap-1 p-1.5 bg-white/80 backdrop-blur-md border border-slate-200/60 shadow-xl rounded-full">
+              <div className="flex items-center gap-1 p-1.5 bg-white/80 dark:bg-slate-800/90 backdrop-blur-md border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-full">
                 {EMOJIS.map(emoji => (
                   <button
                     key={emoji}
@@ -164,13 +164,13 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
 
       {/* Tên người gửi (chỉ hiện với group chat, không phải mình) */}
       {!isOwn && message.groupId && isFirstInGroup && (
-        <p className="text-xs text-slate-500 mb-1 ml-1">{message.sender?.fullName}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 ml-1">{message.sender?.fullName}</p>
       )}
 
       <div
         className={[
           message.type === 'IMAGE' ? 'bg-transparent' : 
-          message.type === 'RECALLED' ? 'px-4 py-2.5 bg-slate-50 border border-slate-200 border-dashed text-slate-400 italic' : 'px-4 py-2.5',
+          message.type === 'RECALLED' ? 'px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-dashed text-slate-400 dark:text-slate-500 italic' : 'px-4 py-2.5',
           'rounded-2xl text-sm leading-relaxed break-words',
           message.type === 'RECALLED' ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') : 
           (message.type === 'IMAGE' || message.type === 'AUDIO') ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') :
@@ -216,7 +216,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
             // Album layout (Grid)
             const gridCols = urls.length === 2 ? 'grid-cols-2' : 'grid-cols-3';
             return (
-              <div className={`grid gap-1 ${gridCols} max-w-[260px] sm:max-w-xs overflow-hidden rounded-2xl ${isOwn ? 'rounded-br-sm' : 'rounded-bl-sm'} border border-slate-200/50`}>
+              <div className={`grid gap-1 ${gridCols} max-w-[260px] sm:max-w-xs overflow-hidden rounded-2xl ${isOwn ? 'rounded-br-sm' : 'rounded-bl-sm'} border border-slate-200/50 dark:border-slate-700/50`}>
                 {urls.map((url, idx) => (
                   <img
                     key={idx}
@@ -256,13 +256,13 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
         <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end mr-1' : 'justify-start ml-1'}`}>
           <div 
             onClick={() => onShowReactions(message.reactions)}
-            className="flex items-center px-1.5 py-0.5 bg-white shadow-sm border border-slate-100 rounded-full cursor-pointer hover:bg-slate-50 transition"
+            className="flex items-center px-1.5 py-0.5 bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 rounded-full cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition"
           >
             {/* Lọc ra các emoji unique để hiển thị */}
             {[...new Set(message.reactions.map(r => r.emoji))].slice(0, 3).map((emoji, idx) => (
               <span key={idx} className="text-[11px] leading-none -ml-0.5 first:ml-0">{emoji}</span>
             ))}
-            <span className="text-[10px] font-semibold text-slate-500 ml-1">{message.reactions.length}</span>
+            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 ml-1">{message.reactions.length}</span>
           </div>
         </div>
       )}
@@ -632,17 +632,17 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   return (
     <div className="flex flex-col h-full min-w-0">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-slate-200/70 bg-white/70 backdrop-blur-xl">
+      <div className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl">
         {/* Mobile: nút mở sidebar */}
         <button
           onClick={onOpenSidebar}
-          className="md:hidden w-10 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition flex items-center justify-center"
+          className="md:hidden w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center justify-center"
           title="Mở danh sách"
           type="button"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="w-5 h-5 text-slate-700"
+            className="w-5 h-5 text-slate-700 dark:text-slate-200"
             viewBox="0 0 24 24"
             fill="currentColor"
           >
@@ -670,8 +670,8 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
           )}
 
           <div className="min-w-0 flex-1 pr-4">
-            <p className="font-semibold text-slate-900 text-sm truncate">{activeConversation.name}</p>
-            <p className={`text-xs font-medium ${activeConversation.type === 'group' ? 'text-slate-500' : (onlineUsers[activeConversation.id] ? 'text-emerald-600' : 'text-slate-400')}`}>
+            <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">{activeConversation.name}</p>
+            <p className={`text-xs font-medium ${activeConversation.type === 'group' ? 'text-slate-500 dark:text-slate-400' : (onlineUsers[activeConversation.id] ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500')}`}>
               {activeConversation.type === 'group' 
                 ? `Cộng đồng • ${activeConversation.memberCount || 0} thành viên`
                 : (onlineUsers[activeConversation.id] 
@@ -687,7 +687,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
         <button
           onClick={onToggleRightSidebar}
           title="Thông tin hội thoại"
-          className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition ml-auto"
+          className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 transition ml-auto"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -713,7 +713,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       {pinnedMessages && pinnedMessages.length > 0 && (
         <div className="relative">
           <div 
-            className="bg-amber-50/50 border-b border-amber-100 px-4 py-2 flex items-center justify-between group cursor-pointer hover:bg-amber-50 transition"
+            className="bg-amber-50/50 dark:bg-amber-900/10 border-b border-amber-100 dark:border-amber-900/30 px-4 py-2 flex items-center justify-between group cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20 transition"
             onClick={() => setIsPinnedDropdownOpen(!isPinnedDropdownOpen)}
           >
             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -737,9 +737,9 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
           {/* Dropdown Menu */}
           {isPinnedDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 z-10 bg-white border-b border-slate-200 shadow-lg max-h-64 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 z-10 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-lg max-h-64 overflow-y-auto">
               {pinnedMessages.map((pin) => (
-                <div key={pin.id} className="px-4 py-3 border-b border-slate-100 flex items-start gap-3 hover:bg-slate-50 transition group">
+                <div key={pin.id} className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-start gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition group">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">
                     {pin.message?.sender?.fullName?.charAt(0) || '?'}
                   </div>
@@ -787,7 +787,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
             <button
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="px-4 py-1.5 text-xs text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 rounded-full transition bg-white/70"
+              className="px-4 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 rounded-full transition bg-white/70 dark:bg-slate-800/70"
               type="button"
             >
               {isFetchingNextPage ? 'Đang tải...' : 'Tải tin nhắn cũ hơn'}
@@ -855,14 +855,14 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
       {/* Input gửi tin nhắn */}
       {activeConversation.type === 'group' && activeConversation.isReadOnly && activeConversation.role === 'MEMBER' ? (
-        <div className="px-3 sm:px-4 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-center">
-          <p className="text-sm text-slate-500 text-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 inline-block mr-1.5 -mt-0.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <div className="px-3 sm:px-4 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+          <p className="text-sm text-slate-500 dark:text-slate-400 text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 inline-block mr-1.5 -mt-0.5 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             Chỉ trưởng/phó cộng đồng được gửi tin nhắn vào cộng đồng. <span className="text-indigo-500 hover:underline cursor-pointer">Tìm hiểu thêm</span>
           </p>
         </div>
       ) : (
-        <div className="px-3 sm:px-4 py-3 border-t border-slate-200/70 bg-white/70 backdrop-blur-xl">
+        <div className="px-3 sm:px-4 py-3 border-t border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl">
           <div className="flex items-end gap-2">
             
             {/* Nút Upload Ảnh */}
@@ -914,10 +914,10 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
               />
             ) : (
               <>
-                <div className="flex-1 flex flex-col min-w-0 bg-slate-50 border border-slate-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200 focus-within:bg-white rounded-2xl transition-all duration-200">
+                <div className="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200 focus-within:bg-white dark:focus-within:bg-slate-900 rounded-2xl transition-all duration-200">
                 {/* Thanh Preview File Hàng Chờ */}
               {pendingFiles.length > 0 && (
-                <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-slate-200 overflow-x-auto custom-scrollbar">
+                <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-slate-200 dark:border-slate-700 overflow-x-auto custom-scrollbar">
                   {pendingFiles.map(pf => (
                     <div key={pf.id} className="relative flex-shrink-0 group">
                       {pf.previewUrl ? (
@@ -944,12 +944,12 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
               )}
               {/* Thanh Preview Trả Lời */}
               {replyingTo && (
-                <div className="flex items-start justify-between px-4 pt-3 pb-2 border-b border-slate-200">
+                <div className="flex items-start justify-between px-4 pt-3 pb-2 border-b border-slate-200 dark:border-slate-700">
                   <div className="flex flex-col min-w-0 pr-2">
-                    <span className="text-[11px] font-semibold text-indigo-600 mb-0.5">
+                    <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 mb-0.5">
                       Đang trả lời {replyingTo.sender?.fullName}
                     </span>
-                    <span className="text-xs text-slate-500 truncate">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
                       {replyingTo.type === 'TEXT' ? replyingTo.content : (replyingTo.type === 'IMAGE' ? '[Hình ảnh]' : '[Tập tin]')}
                     </span>
                   </div>
@@ -972,7 +972,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                 onPaste={handlePaste}
                 rows={1}
                 placeholder={`Nhắn tin ${activeConversation.type === 'group' ? 'nhóm' : activeConversation.name}...`}
-                className="w-full resize-none bg-transparent border-none focus:ring-0 px-4 py-3 min-h-[44px] max-h-32 text-sm leading-5 placeholder-slate-400"
+                className="w-full resize-none bg-transparent border-none focus:ring-0 px-4 py-3 min-h-[44px] max-h-32 text-sm leading-5 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
               />
             </div>
             {/* Nút gửi hoặc thu âm */}

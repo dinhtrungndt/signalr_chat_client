@@ -9,6 +9,7 @@ import useAuthStore from '../../stores/auth.store';
 import useChatStore from '../../stores/chat.store';
 import CreateGroupModal from './CreateGroupModal';
 import ProfileModal from './ProfileModal';
+import useThemeStore from '../../stores/theme.store';
 
 const formatTime = (dateStr) => {
   try {
@@ -54,8 +55,8 @@ const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClick }) =>
           'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left',
           'transition-all duration-150 border',
           isActive
-            ? 'bg-indigo-50 border-indigo-200'
-            : 'bg-transparent border-transparent hover:bg-slate-100',
+            ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/40 dark:border-indigo-500/30'
+            : 'bg-transparent border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/50',
         ].join(' ')}
       >
         {/* Avatar */}
@@ -73,8 +74,8 @@ const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClick }) =>
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className={`text-sm truncate ${item.unreadCount > 0 ? 'font-bold text-slate-900' : 'font-medium text-slate-900'}`}>{item.name}</p>
-          <p className={`text-xs truncate ${item.unreadCount > 0 ? 'font-semibold text-slate-800' : 'text-slate-500'}`}>{item.subtitle || 'Nhấn để chat'}</p>
+          <p className={`text-sm truncate ${item.unreadCount > 0 ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-900 dark:text-slate-200'}`}>{item.name}</p>
+          <p className={`text-xs truncate ${item.unreadCount > 0 ? 'font-semibold text-slate-800 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400'}`}>{item.subtitle || 'Nhấn để chat'}</p>
         </div>
         <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-1">
           {item.time && (
@@ -106,14 +107,14 @@ const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClick }) =>
             </button>
 
             {isMenuOpen && (
-              <div className="absolute right-0 mt-8 w-44 bg-white rounded-xl shadow-lg border border-slate-100 py-1.5 z-50 overflow-hidden">
+              <div className="absolute right-0 mt-8 w-44 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 py-1.5 z-50 overflow-hidden">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsMenuOpen(false);
                     onTogglePin();
                   }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition flex items-center gap-2.5"
+                  className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center gap-2.5"
                 >
                   {isPinned ? (
                     <>
@@ -151,7 +152,20 @@ const Sidebar = ({ onItemClick }) => {
   const [activeTab, setActiveTab] = useState('direct'); // 'direct' hoặc 'group'
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
+  const { theme, setTheme } = useThemeStore();
+
+  const userMenuRef = useRef(null);
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Gọi API lấy Groups
   const { data: groupsData, isLoading: isLoadingGroups } = useQuery({
@@ -260,45 +274,96 @@ const Sidebar = ({ onItemClick }) => {
   };
 
   return (
-    <div className="w-[18rem] sm:w-72 h-full flex flex-col border-r border-slate-200/70 bg-white/70 backdrop-blur-xl">
+    <div className="w-[18rem] sm:w-72 h-full flex flex-col border-r border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl">
       {/* Header */}
-      <div className="px-4 py-4 border-b border-slate-200/70">
+      <div className="px-4 py-4 border-b border-slate-200/70 dark:border-slate-700/70">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
             <img src="https://dvntechnology.com/assets/logo.png" alt="DVN" className="h-6 w-auto object-contain" />
-            <span className="font-bold text-slate-900 text-lg">Trò Chuyện</span>
+            <span className="font-bold text-slate-900 dark:text-white text-lg">Trò Chuyện</span>
           </div>
-          <button
-            onClick={logout}
-            title="Đăng xuất"
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={logout}
+              title="Đăng xuất"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:text-white dark:hover:bg-slate-800 transition"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        <div 
-          onClick={() => setIsProfileModalOpen(true)}
-          className="flex items-center gap-3 p-2 -ml-2 rounded-xl hover:bg-slate-100 cursor-pointer transition group"
-        >
-          <div className="relative">
-            {user?.avatar ? (
-              <img src={`${process.env.REACT_APP_SOCKET_URL}${user.avatar}`} alt="Avatar" className="w-10 h-10 rounded-full object-cover shadow-sm group-hover:opacity-90" />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-bold shadow-sm group-hover:opacity-90">
-                {user?.fullName?.charAt(0)?.toUpperCase()}
+        <div className="relative" ref={userMenuRef}>
+          <div 
+            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            className="flex items-center gap-3 p-2 -ml-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition group"
+          >
+            <div className="relative">
+              {user?.avatar ? (
+                <img src={`${process.env.REACT_APP_SOCKET_URL}${user.avatar}`} alt="Avatar" className="w-10 h-10 rounded-full object-cover shadow-sm group-hover:opacity-90" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-bold shadow-sm group-hover:opacity-90">
+                  {user?.fullName?.charAt(0)?.toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">{user?.fullName}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Đang hoạt động</span>
               </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-slate-900 text-sm truncate">{user?.fullName}</p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-              <span className="text-xs text-emerald-600 font-medium">Đang hoạt động</span>
             </div>
           </div>
+
+          {isUserMenuOpen && (
+            <div className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 py-2 z-50 overflow-hidden">
+              <button
+                onClick={() => { setIsUserMenuOpen(false); setIsProfileModalOpen(true); }}
+                className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-3"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Hồ sơ cá nhân
+              </button>
+              
+              <div className="border-t border-slate-100 dark:border-slate-700 my-1"></div>
+              
+              <div className="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Giao diện
+              </div>
+              <button
+                onClick={() => setTheme('light')}
+                className={`w-full text-left px-4 py-2 text-sm transition flex items-center gap-3 ${theme === 'light' ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Sáng
+              </button>
+              <button
+                onClick={() => setTheme('dark')}
+                className={`w-full text-left px-4 py-2 text-sm transition flex items-center gap-3 ${theme === 'dark' ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+                Tối
+              </button>
+              <button
+                onClick={() => setTheme('system')}
+                className={`w-full text-left px-4 py-2 text-sm transition flex items-center gap-3 ${theme === 'system' ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Theo hệ thống
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Search Input */}
@@ -308,7 +373,7 @@ const Sidebar = ({ onItemClick }) => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Tìm kiếm người dùng..."
-            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-100 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white transition-all"
+            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white dark:focus:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 transition-all"
           />
           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -351,11 +416,11 @@ const Sidebar = ({ onItemClick }) => {
           // Hiển thị mặc định (Tabs)
           <div className="flex flex-col h-full">
             {/* Tabs Selector */}
-            <div className="flex bg-slate-100 rounded-lg p-1 mb-4 flex-shrink-0">
+            <div className="flex bg-slate-100 dark:bg-slate-800/80 rounded-lg p-1 mb-4 flex-shrink-0">
               <button
                 onClick={() => setActiveTab('direct')}
                 className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                  activeTab === 'direct' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'
+                  activeTab === 'direct' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
                 Trực tiếp
@@ -363,7 +428,7 @@ const Sidebar = ({ onItemClick }) => {
               <button
                 onClick={() => setActiveTab('group')}
                 className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                  activeTab === 'group' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'
+                  activeTab === 'group' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
                 Nhóm
@@ -455,7 +520,7 @@ const Sidebar = ({ onItemClick }) => {
       </div>
 
       {/* Footer nhỏ */}
-      <div className="px-4 py-3 border-t border-slate-200/70 text-[11px] text-slate-400">
+      <div className="px-4 py-3 border-t border-slate-200/70 dark:border-slate-700/70 text-[11px] text-slate-400">
         © {new Date().getFullYear()} DVN Chat
       </div>
 

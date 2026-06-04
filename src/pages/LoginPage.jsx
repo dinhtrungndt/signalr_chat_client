@@ -43,20 +43,20 @@ return (
           className="h-10 w-auto object-contain mb-4"
         />
         <div className="text-center">
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Đăng nhập</h1>
-          <p className="text-slate-500 text-sm mt-1">Chào mừng bạn quay lại</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Đăng nhập</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Chào mừng bạn quay lại</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Tên đăng nhập</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tên đăng nhập</label>
           <input {...register('username')} className="input-field" placeholder="vd: taikhoancuaban" autoComplete="username" />
           {errors.username && <p className="text-red-600 text-xs mt-1.5">{errors.username.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Mật khẩu</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Mật khẩu</label>
           <input {...register('password')} type="password" className="input-field" placeholder="••••••••" autoComplete="current-password" />
           {errors.password && <p className="text-red-600 text-xs mt-1.5">{errors.password.message}</p>}
         </div>
@@ -68,7 +68,7 @@ return (
         </button>
       </form>
 
-      <p className="text-center text-slate-600 text-sm mt-6">
+      <p className="text-center text-slate-600 dark:text-slate-400 text-sm mt-6">
         Chưa có tài khoản?{' '}
         <Link to="/register" className="link-primary">
           Đăng ký ngay

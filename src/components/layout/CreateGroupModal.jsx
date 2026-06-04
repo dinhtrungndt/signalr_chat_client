@@ -95,15 +95,15 @@ const CreateGroupModal = ({ isOpen, onClose, onSuccess }) => {
       />
       
       {/* Modal Box */}
-      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh] relative transform transition-all scale-100 opacity-100">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh] relative transform transition-all scale-100 opacity-100 border border-slate-200 dark:border-slate-700">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Tạo nhóm chat</h2>
-            <p className="text-sm text-slate-500 mt-0.5">Thêm bạn bè để cùng trò chuyện</p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Tạo nhóm chat</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Thêm bạn bè để cùng trò chuyện</p>
           </div>
-          <button onClick={onClose} className="p-2.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-200/50 transition">
+          <button onClick={onClose} className="p-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-700 transition">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -124,24 +124,24 @@ const CreateGroupModal = ({ isOpen, onClose, onSuccess }) => {
           <div className="space-y-6">
             {/* Tên nhóm */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Tên nhóm</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Tên nhóm</label>
               <input
                 type="text"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
                 placeholder="VD: Hội chém gió cuối tuần"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:bg-white outline-none transition text-slate-900"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:bg-white dark:focus:bg-slate-900 outline-none transition text-slate-900 dark:text-white"
               />
             </div>
 
-            <div className="h-px bg-slate-100" />
+            <div className="h-px bg-slate-100 dark:bg-slate-700" />
 
             {/* Tìm kiếm thành viên */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-semibold text-slate-700">Thêm thành viên</label>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Thêm thành viên</label>
                 {selectedUsers.length > 0 && (
-                  <span className="text-xs font-medium bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full">
                     Đã chọn {selectedUsers.length}
                   </span>
                 )}
@@ -153,7 +153,7 @@ const CreateGroupModal = ({ isOpen, onClose, onSuccess }) => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Tìm kiếm theo tên hoặc SĐT..."
-                  className="w-full pl-10 pr-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white transition"
+                  className="w-full pl-10 pr-4 py-3 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white dark:focus:bg-slate-900 transition text-slate-900 dark:text-white"
                 />
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-slate-400 absolute left-3.5 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -162,14 +162,14 @@ const CreateGroupModal = ({ isOpen, onClose, onSuccess }) => {
 
               {/* Danh sách tìm kiếm */}
               {searchQuery.trim().length > 0 && (
-                <div className="border border-slate-200 rounded-xl max-h-48 overflow-y-auto mb-5 bg-white shadow-sm custom-scrollbar">
+                <div className="border border-slate-200 dark:border-slate-700 rounded-xl max-h-48 overflow-y-auto mb-5 bg-white dark:bg-slate-800 shadow-sm custom-scrollbar">
                   {isFetching ? (
-                    <div className="p-4 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
+                    <div className="p-4 text-center text-sm text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2">
                       <svg className="animate-spin w-4 h-4 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                       Đang tìm...
                     </div>
                   ) : searchResults.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-slate-500">Không tìm thấy người dùng nào</div>
+                    <div className="p-4 text-center text-sm text-slate-500 dark:text-slate-400">Không tìm thấy người dùng nào</div>
                   ) : (
                     searchResults.map((u) => {
                       const isSelected = selectedUsers.some((selected) => selected.id === u.id);
@@ -177,9 +177,9 @@ const CreateGroupModal = ({ isOpen, onClose, onSuccess }) => {
                         <div
                           key={`res_${u.id}`}
                           onClick={() => toggleUser(u)}
-                          className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer transition border-b border-slate-50 last:border-0"
+                          className="flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition border-b border-slate-50 dark:border-slate-700 last:border-0"
                         >
-                          <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'bg-white border border-slate-300'}`}>
+                          <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600'}`}>
                             {isSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                           </div>
                           
@@ -188,8 +188,8 @@ const CreateGroupModal = ({ isOpen, onClose, onSuccess }) => {
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900 truncate">{u.fullName}</p>
-                            <p className="text-xs text-slate-500 truncate">{u.username}</p>
+                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{u.fullName}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{u.username}</p>
                           </div>
                         </div>
                       );
@@ -203,9 +203,9 @@ const CreateGroupModal = ({ isOpen, onClose, onSuccess }) => {
                 <div className="mt-4">
                   <div className="flex flex-wrap gap-2">
                     {selectedUsers.map(u => (
-                      <div key={`sel_${u.id}`} className="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 pl-3 pr-1.5 py-1.5 rounded-xl text-sm font-medium border border-indigo-100">
+                      <div key={`sel_${u.id}`} className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 pl-3 pr-1.5 py-1.5 rounded-xl text-sm font-medium border border-indigo-100 dark:border-indigo-800">
                         <span className="truncate max-w-[120px]">{u.fullName}</span>
-                        <button onClick={() => toggleUser(u)} className="hover:text-white hover:bg-indigo-400 p-1 rounded-lg transition-colors bg-indigo-200/50">
+                        <button onClick={() => toggleUser(u)} className="hover:text-white hover:bg-indigo-400 p-1 rounded-lg transition-colors bg-indigo-200/50 dark:bg-indigo-800/50">
                           <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                         </button>
                       </div>
@@ -218,8 +218,8 @@ const CreateGroupModal = ({ isOpen, onClose, onSuccess }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-5 bg-slate-50/80 border-t border-slate-100 flex justify-end gap-3">
-          <button onClick={onClose} disabled={isSubmitting} className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200 bg-slate-200/50 rounded-xl transition">
+        <div className="px-6 py-5 bg-slate-50/80 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+          <button onClick={onClose} disabled={isSubmitting} className="px-5 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 bg-slate-200/50 dark:bg-slate-700/50 rounded-xl transition">
             Hủy
           </button>
           <button onClick={handleCreate} disabled={isSubmitting || !groupName.trim()} className="px-6 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-sm shadow-indigo-200 transition flex items-center gap-2">

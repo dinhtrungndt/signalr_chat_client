@@ -115,13 +115,13 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
         onClick={onClose}
       />
       
-      <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col max-h-[85vh] relative transform transition-all scale-100 opacity-100">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col max-h-[85vh] relative transform transition-all scale-100 opacity-100 border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Quản lý nhóm</h2>
-            <p className="text-sm text-slate-500 mt-0.5">{members.length} người tham gia</p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Quản lý nhóm</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{members.length} người tham gia</p>
           </div>
-          <button onClick={onClose} className="p-2.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-200/50 transition">
+          <button onClick={onClose} className="p-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-700 transition">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -129,16 +129,16 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-slate-100">
+        <div className="flex border-b border-slate-100 dark:border-slate-800">
           <button
             onClick={() => setActiveTab('members')}
-            className={`flex-1 py-3 text-sm font-medium transition ${activeTab === 'members' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50' : 'text-slate-500 hover:bg-slate-50'}`}
+            className={`flex-1 py-3 text-sm font-medium transition ${activeTab === 'members' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
           >
             Thành viên
           </button>
           <button
             onClick={() => setActiveTab('add')}
-            className={`flex-1 py-3 text-sm font-medium transition ${activeTab === 'add' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50' : 'text-slate-500 hover:bg-slate-50'}`}
+            className={`flex-1 py-3 text-sm font-medium transition ${activeTab === 'add' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
           >
             Thêm người
           </button>
@@ -148,18 +148,18 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
           {activeTab === 'members' && (
             <>
               {isLoading ? (
-            <div className="p-8 text-center text-sm text-slate-500 flex flex-col items-center gap-3">
+            <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400 flex flex-col items-center gap-3">
               <svg className="animate-spin w-6 h-6 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
               Đang tải danh sách...
             </div>
           ) : members.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-500">Không có thành viên nào</div>
+            <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">Không có thành viên nào</div>
           ) : (
             <div className="space-y-1">
               {members.map((m) => {
                 const isOnline = onlineUsers[m.userId];
                 return (
-                  <div key={m.userId} className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-xl transition">
+                  <div key={m.userId} className="flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition">
                     <div className="relative">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm shrink-0">
                         {m.user.fullName?.charAt(0)?.toUpperCase() || '?'}
@@ -170,20 +170,20 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-slate-900 truncate">
+                        <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                           {m.userId === currentUser?.id ? 'Bạn' : m.user.fullName}
                         </p>
                         {m.role === 'ADMIN' && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
                             Trưởng nhóm
                           </span>
                         )}
                         {m.role === 'DEPUTY' && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400">
                             Phó nhóm
                           </span>
                         )}
-                        <p className="text-xs text-slate-500 truncate">{m.user.username}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{m.user.username}</p>
                       </div>
                     </div>
 
@@ -244,7 +244,7 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
                   placeholder="Tìm theo Tên hoặc Tài khoản..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition text-slate-900 dark:text-white"
                 />
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -253,28 +253,28 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
 
               <div className="space-y-2">
                 {isSearching ? (
-                  <div className="text-center text-sm text-slate-500 py-4">Đang tìm kiếm...</div>
+                  <div className="text-center text-sm text-slate-500 dark:text-slate-400 py-4">Đang tìm kiếm...</div>
                 ) : searchResults.length > 0 ? (
                   searchResults.map((u) => {
                     // Kiểm tra xem user này đã có trong nhóm chưa
                     const isAlreadyMember = members.some(m => m.userId === u.id);
 
                     return (
-                      <div key={u.id} className="flex items-center gap-3 p-2 bg-white border border-slate-100 rounded-xl">
+                      <div key={u.id} className="flex items-center gap-3 p-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm">
                           {u.fullName?.charAt(0)?.toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900 truncate">{u.fullName}</p>
-                          <p className="text-xs text-slate-500 truncate">{u.username}</p>
+                          <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{u.fullName}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{u.username}</p>
                         </div>
                         <button
                           onClick={() => addMutation.mutate(u.id)}
                           disabled={isAlreadyMember || addMutation.isLoading}
                           className={`px-3 py-1.5 text-xs font-medium rounded-lg transition ${
                             isAlreadyMember 
-                              ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                              : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                              ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                              : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
                           }`}
                         >
                           {isAlreadyMember ? 'Đã thêm' : 'Thêm'}
@@ -283,7 +283,7 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
                     );
                   })
                 ) : (
-                  searchQuery && <div className="text-center text-sm text-slate-500 py-4">Không tìm thấy ai.</div>
+                  searchQuery && <div className="text-center text-sm text-slate-500 dark:text-slate-400 py-4">Không tìm thấy ai.</div>
                 )}
               </div>
             </div>
@@ -291,7 +291,7 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex gap-3">
           {isAdmin && (
             <button
               onClick={() => {
@@ -316,9 +316,9 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
         {/* Modal Xác nhận rời nhóm */}
         {isLeaveConfirmOpen && (
           <div className="absolute inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full p-5 shadow-xl">
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Rời khỏi nhóm</h3>
-              <p className="text-sm text-slate-500 mb-4">Bạn có chắc chắn muốn rời nhóm này không?</p>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl w-full p-5 shadow-xl border border-slate-200 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Rời khỏi nhóm</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Bạn có chắc chắn muốn rời nhóm này không?</p>
               
               <label className="flex items-center gap-2 mb-5 cursor-pointer">
                 <input 
@@ -327,13 +327,13 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
                   onChange={(e) => setIsSilentLeave(e.target.checked)}
                   className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
                 />
-                <span className="text-sm font-medium text-slate-700">Rời nhóm trong im lặng</span>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Rời nhóm trong im lặng</span>
               </label>
 
               <div className="flex gap-3">
                 <button 
                   onClick={() => setIsLeaveConfirmOpen(false)}
-                  className="flex-1 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+                  className="flex-1 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition"
                 >
                   Huỷ
                 </button>

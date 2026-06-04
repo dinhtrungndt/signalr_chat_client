@@ -33,7 +33,7 @@ const UserProfileModal = ({ isOpen, onClose, userId }) => {
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose}>
       <div 
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in-up relative"
+        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in-up relative border border-slate-200 dark:border-slate-700"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cover Photo */}
@@ -53,15 +53,15 @@ const UserProfileModal = ({ isOpen, onClose, userId }) => {
           {/* Avatar (overlays cover) */}
           <div className="flex justify-center -mt-12 mb-3">
             {isLoading ? (
-              <div className="w-24 h-24 rounded-full bg-slate-200 animate-pulse border-4 border-white shadow-md"></div>
+              <div className="w-24 h-24 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse border-4 border-white dark:border-slate-900 shadow-md"></div>
             ) : profile?.avatar ? (
               <img 
                 src={`${process.env.REACT_APP_SOCKET_URL}${profile.avatar}`} 
                 alt="Avatar" 
-                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md bg-white"
+                className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-slate-900 shadow-md bg-white dark:bg-slate-800"
               />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-3xl font-bold shadow-md border-4 border-white">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-3xl font-bold shadow-md border-4 border-white dark:border-slate-900">
                 {profile?.fullName?.charAt(0)?.toUpperCase() || '?'}
               </div>
             )}
@@ -69,41 +69,41 @@ const UserProfileModal = ({ isOpen, onClose, userId }) => {
 
           {isLoading ? (
             <div className="space-y-4 animate-pulse">
-              <div className="h-6 bg-slate-200 rounded w-1/2 mx-auto"></div>
-              <div className="h-4 bg-slate-200 rounded w-1/3 mx-auto"></div>
-              <div className="h-10 bg-slate-200 rounded mt-6 w-full"></div>
+              <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-1/2 mx-auto"></div>
+              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mx-auto"></div>
+              <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded mt-6 w-full"></div>
             </div>
           ) : error ? (
             <div className="text-center text-red-500 text-sm py-4">{error}</div>
           ) : profile ? (
             <div className="text-center">
-              <h2 className="text-xl font-bold text-slate-900">{profile.fullName}</h2>
-              <p className="text-sm text-slate-500 font-medium">@{profile.username}</p>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">{profile.fullName}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">@{profile.username}</p>
               
-              <div className="mt-6 text-left space-y-4 bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <div className="mt-6 text-left space-y-4 bg-slate-50 dark:bg-slate-800 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 flex-shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                     </svg>
                   </div>
                   <div>
                     <p className="text-xs text-slate-400 font-medium">Số điện thoại</p>
-                    <p className={`text-sm font-semibold ${profile.phone ? 'text-slate-700' : 'text-slate-400 italic'}`}>
+                    <p className={`text-sm font-semibold ${profile.phone ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500 italic'}`}>
                       {profile.phone || 'Chưa cập nhật'}
                     </p>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 flex-shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
                   <div>
                     <p className="text-xs text-slate-400 font-medium">Ngày tham gia</p>
-                    <p className="text-sm font-semibold text-slate-700">
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                       {profile.createdAt ? format(new Date(profile.createdAt), 'dd MMMM, yyyy', { locale: vi }) : 'Không rõ'}
                     </p>
                   </div>
