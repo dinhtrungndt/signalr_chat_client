@@ -1,28 +1,68 @@
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const QrScanModal = ({ onClose, status, error, onScan }) => {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+
   useEffect(() => {
-    // Nếu đang xử lý hoặc thành công thì không khởi tạo lại scanner
     if (status === 'loading' || status === 'success') return;
 
-    let html5QrCode;
+    let isScanned = false;
+    let animationId = null;
+    let stream = null;
 
-    const startScanner = async () => {
-      let isScanned = false;
+    // ====== Phương án 1: Native BarcodeDetector (Chrome 83+) - Siêu nhanh ======
+    const hasNativeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
+
+    const startNativeScanner = async () => {
       try {
-        html5QrCode = new Html5Qrcode("qr-reader");
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+        });
+        const video = videoRef.current;
+        if (!video) return;
+        video.srcObject = stream;
+        await video.play();
+
+        const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+
+        const scan = async () => {
+          if (isScanned || !video || video.readyState < 2) {
+            animationId = requestAnimationFrame(scan);
+            return;
+          }
+          try {
+            const barcodes = await detector.detect(video);
+            if (barcodes.length > 0 && !isScanned) {
+              isScanned = true;
+              onScan(barcodes[0].rawValue);
+              return;
+            }
+          } catch (e) { /* ignore */ }
+          animationId = requestAnimationFrame(scan);
+        };
+        animationId = requestAnimationFrame(scan);
+      } catch (err) {
+        console.error('Native scanner error:', err);
+      }
+    };
+
+    // ====== Phương án 2: Fallback html5-qrcode ======
+    let html5QrCode;
+    const startFallbackScanner = async () => {
+      try {
+        html5QrCode = new Html5Qrcode("qr-reader-fallback");
         await html5QrCode.start(
           { facingMode: "environment" },
           {
-            fps: 30, // 30 fps là tối ưu nhất cho web
-            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE], // Chỉ quét QR Code
+            fps: 30,
+            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
             aspectRatio: 1.0,
             disableFlip: false,
-            useBarCodeDetectorIfSupported: true, // Dùng phần cứng (nếu trình duyệt hỗ trợ) -> Siêu nhanh như Zalo
-            qrbox: (viewfinderWidth, viewfinderHeight) => {
-              // Focus CPU vào 75% ở giữa màn hình (như Zalo), giảm diện tích phân tích ảnh -> Quét nhanh gấp đôi
-              const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.75);
+            useBarCodeDetectorIfSupported: true,
+            qrbox: (w, h) => {
+              const size = Math.floor(Math.min(w, h) * 0.75);
               return { width: size, height: size };
             }
           },
@@ -31,20 +71,25 @@ const QrScanModal = ({ onClose, status, error, onScan }) => {
             isScanned = true;
             onScan(decodedText);
           },
-          (errorMessage) => {
-            // Lỗi parse (bỏ qua)
-          }
+          () => {}
         );
       } catch (err) {
-        console.error("Lỗi khi khởi động camera:", err);
+        console.error("Fallback scanner error:", err);
       }
     };
 
-    startScanner();
+    if (hasNativeDetector) {
+      startNativeScanner();
+    } else {
+      startFallbackScanner();
+    }
 
     return () => {
+      isScanned = true;
+      if (animationId) cancelAnimationFrame(animationId);
+      if (stream) stream.getTracks().forEach(t => t.stop());
       if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().catch(err => console.error("Lỗi khi dừng camera:", err));
+        html5QrCode.stop().catch(() => {});
       }
     };
   }, [onScan, status]);
@@ -84,7 +129,10 @@ const QrScanModal = ({ onClose, status, error, onScan }) => {
 
             {/* Vùng chứa Scanner */}
             <div className="relative overflow-hidden rounded-2xl bg-slate-900 border-4 border-slate-100 dark:border-slate-800 w-full aspect-square flex items-center justify-center shadow-inner group">
-              <div id="qr-reader" className="absolute inset-0 w-full h-full flex items-center justify-center"></div>
+              {/* Native Camera Video (BarcodeDetector) */}
+              <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
+              {/* Fallback html5-qrcode container */}
+              <div id="qr-reader-fallback" className="absolute inset-0 w-full h-full"></div>
 
               {/* Scanner Line Animation */}
               <div className="absolute top-0 left-4 right-4 h-0.5 bg-indigo-500 animate-scan z-10 shadow-[0_0_12px_3px_rgba(99,102,241,0.8)]"></div>

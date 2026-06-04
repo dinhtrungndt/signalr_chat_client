@@ -14,9 +14,11 @@ const AudioRecorder = ({ onSend, onCancel }) => {
   const audioChunksRef = useRef([]);
   const timerIntervalRef = useRef(null);
   const streamRef = useRef(null);
+  const isCancelledRef = useRef(false); // Cờ chặn gửi khi hủy
 
   const startRecording = async () => {
     try {
+      isCancelledRef.current = false;
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       
@@ -25,18 +27,18 @@ const AudioRecorder = ({ onSend, onCancel }) => {
       audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
+        if (e.data.size > 0 && !isCancelledRef.current) {
           audioChunksRef.current.push(e.data);
         }
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
         
-        // Pass blob to parent
-        if (audioChunksRef.current.length > 0) {
+        // CHỈ gửi khi KHÔNG bị hủy và có dữ liệu thực sự
+        if (!isCancelledRef.current && audioChunksRef.current.length > 0) {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
           onSend(audioBlob);
         }
       };
@@ -63,13 +65,14 @@ const AudioRecorder = ({ onSend, onCancel }) => {
   };
 
   const cancelRecording = (triggerParent = true) => {
+    isCancelledRef.current = true; // Đánh dấu HỦY trước khi stop
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
     }
-    audioChunksRef.current = []; // Clear chunks so onstop won't send
+    audioChunksRef.current = [];
     clearInterval(timerIntervalRef.current);
     if (triggerParent && onCancel) {
       onCancel();
