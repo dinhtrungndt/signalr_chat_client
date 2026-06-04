@@ -30,9 +30,11 @@ const getSubtitle = (lastMessage, prefix) => {
   return prefix ? `${prefix}: ${text}` : text;
 };
 
-const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClearConversation, onClick }) => {
+const ConversationItem = ({ item, isActive, isPinned, isMuted, onTogglePin, onToggleMute, onClearConversation, onClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState('bottom');
   const menuRef = useRef(null);
+  const buttonRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -87,6 +89,11 @@ const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClearConver
                   <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
                 </svg>
               )}
+              {isMuted && (
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM16.707 7.293a1 1 0 010 1.414L15.414 10l1.293 1.293a1 1 0 01-1.414 1.414L14 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L12.586 10l-1.293-1.293a1 1 0 011.414-1.414L14 8.586l1.293-1.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
               {item.time}
             </div>
           )}
@@ -100,7 +107,20 @@ const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClearConver
         {onTogglePin && (
           <div className={`relative flex items-center -mr-1 ${isMenuOpen ? 'opacity-100 z-10' : 'opacity-100 sm:opacity-0 group-hover:opacity-100'} transition-opacity`} ref={menuRef}>
             <button 
-              onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
+              ref={buttonRef}
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                if (!isMenuOpen && buttonRef.current) {
+                  const rect = buttonRef.current.getBoundingClientRect();
+                  const spaceBelow = window.innerHeight - rect.bottom;
+                  if (spaceBelow < 150) {
+                    setMenuPosition('top');
+                  } else {
+                    setMenuPosition('bottom');
+                  }
+                }
+                setIsMenuOpen(!isMenuOpen); 
+              }}
               className={`p-1 rounded-full shadow-sm transition-colors ${isMenuOpen ? 'bg-slate-200 text-slate-700' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-700 bg-transparent'}`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -109,7 +129,7 @@ const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClearConver
             </button>
 
             {isMenuOpen && (
-              <div className="absolute right-0 mt-8 w-44 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 py-1.5 z-50 overflow-hidden">
+              <div className={`absolute right-0 w-44 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-1.5 z-[100] overflow-hidden ${menuPosition === 'top' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'}`}>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -134,6 +154,32 @@ const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClearConver
                     </>
                   )}
                 </button>
+                {onToggleMute && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMenuOpen(false);
+                      onToggleMute();
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center gap-2.5"
+                  >
+                    {isMuted ? (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-indigo-500" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
+                        </svg>
+                        <span className="font-medium">Bật thông báo</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-slate-500" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM16.707 7.293a1 1 0 010 1.414L15.414 10l1.293 1.293a1 1 0 01-1.414 1.414L14 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L12.586 10l-1.293-1.293a1 1 0 011.414-1.414L14 8.586l1.293-1.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        <span className="font-medium">Tắt thông báo</span>
+                      </>
+                    )}
+                  </button>
+                )}
                 {onClearConversation && (
                   <button
                     onClick={(e) => {
@@ -213,6 +259,13 @@ const Sidebar = ({ onItemClick }) => {
   });
   const pinnedConversations = pinnedConversationsData || [];
 
+  // Gọi API lấy Muted Conversations
+  const { data: mutedConversationsData } = useQuery({
+    queryKey: ['muted-conversations'],
+    queryFn: () => userApi.getMutedConversations().then((r) => r.data.data),
+  });
+  const mutedConversations = mutedConversationsData || [];
+
   const handleTogglePin = async (type, id) => {
     const isPinned = pinnedConversations.some(p => String(p.type).toUpperCase() === String(type).toUpperCase() && Number(p.entityId) === Number(id));
     try {
@@ -227,17 +280,32 @@ const Sidebar = ({ onItemClick }) => {
     }
   };
 
+  const handleToggleMute = async (type, id) => {
+    const isMuted = mutedConversations.some(m => String(m.type).toUpperCase() === String(type).toUpperCase() && Number(m.entityId) === Number(id));
+    try {
+      if (isMuted) {
+        await userApi.unmuteConversation(type.toUpperCase(), id);
+      } else {
+        await userApi.muteConversation(type.toUpperCase(), id);
+      }
+      queryClient.invalidateQueries(['muted-conversations']);
+    } catch (err) {
+      useUIStore.getState().showAlert(err.response?.data?.message || 'Có lỗi xảy ra', 'error');
+    }
+  };
+
   const sortedChats = useMemo(() => {
     const pinned = [];
     const normal = [];
     recentChats.forEach(chat => {
       if (clearState && clearState.type === 'direct' && clearState.id === chat.id) return;
       const isPinned = pinnedConversations.some(p => String(p.type).toUpperCase() === 'DIRECT' && Number(p.entityId) === Number(chat.id));
-      if (isPinned) pinned.push({ ...chat, isPinned });
-      else normal.push(chat);
+      const isMuted = mutedConversations.some(m => String(m.type).toUpperCase() === 'DIRECT' && Number(m.entityId) === Number(chat.id));
+      if (isPinned) pinned.push({ ...chat, isPinned, isMuted });
+      else normal.push({ ...chat, isMuted });
     });
     return [...pinned, ...normal];
-  }, [recentChats, pinnedConversations, clearState]);
+  }, [recentChats, pinnedConversations, mutedConversations, clearState]);
 
   const sortedGroups = useMemo(() => {
     const pinned = [];
@@ -245,11 +313,12 @@ const Sidebar = ({ onItemClick }) => {
     groups.forEach(group => {
       if (clearState && clearState.type === 'group' && clearState.id === group.id) return;
       const isPinned = pinnedConversations.some(p => String(p.type).toUpperCase() === 'GROUP' && Number(p.entityId) === Number(group.id));
-      if (isPinned) pinned.push({ ...group, isPinned });
-      else normal.push(group);
+      const isMuted = mutedConversations.some(m => String(m.type).toUpperCase() === 'GROUP' && Number(m.entityId) === Number(group.id));
+      if (isPinned) pinned.push({ ...group, isPinned, isMuted });
+      else normal.push({ ...group, isMuted });
     });
     return [...pinned, ...normal];
-  }, [groups, pinnedConversations, clearState]);
+  }, [groups, pinnedConversations, mutedConversations, clearState]);
 
   const handleClearConversation = (type, id) => {
     setClearState({ type, id, countdown: 5 });
@@ -650,7 +719,9 @@ const Sidebar = ({ onItemClick }) => {
                             }}
                             isActive={activeConversation?.type === 'direct' && activeConversation?.id === chat.id}
                             isPinned={chat.isPinned}
+                            isMuted={chat.isMuted}
                             onTogglePin={() => handleTogglePin('direct', chat.id)}
+                            onToggleMute={() => handleToggleMute('direct', chat.id)}
                             onClearConversation={() => handleClearConversation('direct', chat.id)}
                             onClick={() => handleSelectConversation('direct', chat.id, chat.fullName, chat.avatar)}
                           />
@@ -695,7 +766,9 @@ const Sidebar = ({ onItemClick }) => {
                             }}
                             isActive={activeConversation?.type === 'group' && activeConversation?.id === group.id}
                             isPinned={group.isPinned}
+                            isMuted={group.isMuted}
                             onTogglePin={() => handleTogglePin('group', group.id)}
+                            onToggleMute={() => handleToggleMute('group', group.id)}
                             onClearConversation={() => handleClearConversation('group', group.id)}
                             onClick={() => handleSelectConversation('group', group.id, group.name, group.avatar, group.role, group.isReadOnly, group.memberCount)}
                           />
