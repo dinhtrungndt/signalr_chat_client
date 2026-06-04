@@ -6,6 +6,7 @@ import GroupMembersModal from './GroupMembersModal';
 import ReactionListModal from './ReactionListModal';
 import UserProfileModal from './UserProfileModal';
 import ImageViewerModal from './ImageViewerModal';
+import ShareMessageModal from './ShareMessageModal';
 import AudioRecorder from './AudioRecorder';
 import WaveformPlayer from '../common/WaveformPlayer';
 import messageApi from '../../api/message.api';
@@ -54,13 +55,24 @@ const renderTextWithLinks = (text) => {
 
 const MessageItem = ({ 
   message, isOwn, readers, isAdmin, 
-  onReply, onPin, onImageClick, onReact, onShowReactions, onDeleteForMe, 
+  onReply, onPin, onShare, onImageClick, onReact, onShowReactions, onDeleteForMe, 
   isFirstInGroup = true, isLastInGroup = true,
   isSelectionMode = false, isSelected = false, onToggleSelect = null, onEnableSelectionMode = null, isDraggingSelection = false
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [countdown, setCountdown] = useState(5);
+  const [dropdownPos, setDropdownPos] = useState('bottom');
   const countdownIntervalRef = useRef(null);
+
+  const handleMenuEnter = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+    if (rect.top > windowHeight / 2) {
+      setDropdownPos('top');
+    } else {
+      setDropdownPos('bottom');
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -194,7 +206,7 @@ const MessageItem = ({
 
         {/* Nút Thả cảm xúc */}
         {message.type !== 'RECALLED' && (
-          <div className="relative group/react">
+          <div className="relative group/react" onMouseEnter={handleMenuEnter}>
             <button
               className="p-1 text-slate-400 hover:text-pink-500 hover:bg-pink-50 dark:hover:bg-pink-900/30 rounded-full"
               title="Thả cảm xúc"
@@ -204,7 +216,7 @@ const MessageItem = ({
               </svg>
             </button>
             {/* Glassmorphism Reaction Picker */}
-            <div className={`absolute bottom-full pb-1 ${isOwn ? 'right-0' : 'left-0'} hidden group-hover/react:block z-50 animate-fade-in-up w-max`}>
+            <div className={`absolute ${dropdownPos === 'top' ? 'bottom-full pb-1' : 'top-full pt-1'} ${isOwn ? 'right-0' : 'left-0'} hidden group-hover/react:block z-[999] animate-fade-in w-max`}>
               <div className="grid grid-cols-3 gap-1 p-1.5 bg-white/80 dark:bg-slate-800/90 backdrop-blur-md border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-xl">
                 {EMOJIS.map(emoji => (
                   <button
@@ -222,14 +234,14 @@ const MessageItem = ({
         )}
 
         {/* Menu 3 Chấm */}
-        <div className="relative group/more">
+        <div className="relative group/more" onMouseEnter={handleMenuEnter}>
           <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors" title="Thêm tùy chọn">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
             </svg>
           </button>
           {/* Dropdown Box */}
-          <div className={`absolute bottom-full pb-1 ${isOwn ? 'right-0' : 'left-0'} hidden group-hover/more:block z-50 animate-fade-in-up w-max`}>
+          <div className={`absolute ${dropdownPos === 'top' ? 'bottom-full pb-1' : 'top-full pt-1'} ${isOwn ? 'right-0' : 'left-0'} hidden group-hover/more:block z-[999] animate-fade-in w-max`}>
             <div className="bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden py-1.5 w-40 flex flex-col">
               <button 
                 onClick={() => navigator.clipboard.writeText(message.type === 'TEXT' ? message.content : 'Tin nhắn')} 
@@ -238,12 +250,20 @@ const MessageItem = ({
                 Copy tin nhắn
               </button>
               {message.type !== 'RECALLED' && (
-                <button 
-                  onClick={() => onPin(message)} 
-                  className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors"
-                >
-                  Ghim tin nhắn
-                </button>
+                <>
+                  <button 
+                    onClick={() => onShare && onShare(message)} 
+                    className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors"
+                  >
+                    Chia sẻ
+                  </button>
+                  <button 
+                    onClick={() => onPin(message)} 
+                    className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors"
+                  >
+                    Ghim tin nhắn
+                  </button>
+                </>
               )}
               {isOwn && message.type !== 'RECALLED' && (
                 <button 
@@ -435,6 +455,8 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [isGroupMembersModalOpen, setIsGroupMembersModalOpen] = useState(false);
   const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [messagesToShare, setMessagesToShare] = useState([]);
   const [isPinnedDropdownOpen, setIsPinnedDropdownOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -853,6 +875,13 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
     }
   };
 
+  const handleBatchShare = () => {
+    if (selectedMessages.size === 0) return;
+    const msgs = [...selectedMessages].map(id => messages.find(m => m.id.toString() === id.toString())).filter(Boolean);
+    setMessagesToShare(msgs);
+    setIsShareModalOpen(true);
+  };
+
   // Drag to select Handlers cho chuột
   const handleMouseDown = (e) => {
     if (isSelectionMode && e.button === 0) {
@@ -909,7 +938,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
               <span className="hidden sm:inline">Sao chép</span>
             </button>
-            <button onClick={() => useUIStore.getState().showToast('Chức năng chia sẻ đang phát triển', 'info')} className="p-2 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition flex items-center gap-1">
+            <button onClick={handleBatchShare} className="p-2 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition flex items-center gap-1">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
               <span className="hidden sm:inline">Chia sẻ</span>
             </button>
@@ -1129,6 +1158,10 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
               isAdmin={activeConversation?.role === 'ADMIN' || activeConversation?.role === 'DEPUTY'} 
               onReply={setReplyingTo} 
               onPin={handlePinMessage} 
+              onShare={(msg) => {
+                setMessagesToShare([msg]);
+                setIsShareModalOpen(true);
+              }}
               onImageClick={setPreviewImage} 
               onShowReactions={setReactionsToShow}
               onReact={(message, emoji) => {
@@ -1371,6 +1404,14 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
         isOpen={isUserProfileModalOpen}
         onClose={() => setIsUserProfileModalOpen(false)}
         userId={activeConversation.type === 'direct' ? activeConversation.id : null}
+      />
+
+      {/* Render Share Message Modal */}
+      <ShareMessageModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        messagesToShare={messagesToShare}
+        onSuccess={handleCancelSelection}
       />
     </div>
   );
