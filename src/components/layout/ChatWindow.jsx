@@ -195,19 +195,33 @@ const MessageItem = ({
       {/* Nội dung tin nhắn */}
       <div className={`flex items-end gap-2 flex-1 min-w-0 ${isLastInGroup ? 'mb-3' : 'mb-1'} ${isOwn ? 'flex-row-reverse' : 'flex-row'} ${isSelectionMode ? 'pointer-events-none' : ''}`}>
       {/* Avatar người gửi (chỉ hiện khi không phải mình) */}
-    {!isOwn && (
-      isLastInGroup ? (
-        message.sender?.avatar ? (
-          <img src={`${process.env.REACT_APP_SOCKET_URL}${message.sender.avatar}`} alt="Avatar" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
-        ) : (
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            {message.sender?.fullName?.charAt(0) || '?'}
+      {!isOwn && (
+        isLastInGroup ? (
+          <div className="relative flex-shrink-0">
+            {message.sender?.avatar ? (
+              <img src={`${process.env.REACT_APP_SOCKET_URL}${message.sender.avatar}`} alt="Avatar" className={`w-7 h-7 rounded-full object-cover ${message.senderRole === 'ADMIN' ? 'border-[1.5px] border-amber-400' : (message.senderRole === 'DEPUTY' ? 'border-[1.5px] border-slate-400' : '')}`} />
+            ) : (
+              <div className={`w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-xs font-bold ${message.senderRole === 'ADMIN' ? 'border-[1.5px] border-amber-400' : (message.senderRole === 'DEPUTY' ? 'border-[1.5px] border-slate-400' : '')}`}>
+                {message.sender?.fullName?.charAt(0) || '?'}
+              </div>
+            )}
+            
+            {/* Biểu tượng Chìa Khóa cho Admin / Phó nhóm */}
+            {(message.senderRole === 'ADMIN' || message.senderRole === 'DEPUTY') && (
+              <div 
+                className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 ${message.senderRole === 'ADMIN' ? 'bg-amber-400 text-white' : 'bg-slate-400 text-white'}`}
+                title={message.senderRole === 'ADMIN' ? 'Trưởng nhóm' : 'Phó nhóm'}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
           </div>
+        ) : (
+          <div className="w-7 h-7 flex-shrink-0"></div>
         )
-      ) : (
-        <div className="w-7 h-7 flex-shrink-0"></div>
-      )
-    )}
+      )}
 
     <div className="max-w-[78%] sm:max-w-[70%] group relative" id={`msg-${message.id}`}>
       {/* Nút Hành Động (hiển thị khi hover) */}
@@ -350,6 +364,8 @@ const MessageItem = ({
           message.type === 'RECALLED' ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') : 
           (message.type === 'IMAGE' || message.type === 'AUDIO') ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') :
           (isOwn ? 'msg-mine rounded-br-sm' : 'msg-other rounded-bl-sm'),
+          !isOwn && message.type !== 'RECALLED' && message.senderRole === 'ADMIN' ? 'border-[1px] border-amber-300/60 dark:border-amber-700/60' : '',
+          !isOwn && message.type !== 'RECALLED' && message.senderRole === 'DEPUTY' ? 'border-[1px] border-slate-300 dark:border-slate-600' : ''
         ].join(' ')}
       >
         {/* Nếu có reply, hiển thị khối reply ở trên cùng */}
