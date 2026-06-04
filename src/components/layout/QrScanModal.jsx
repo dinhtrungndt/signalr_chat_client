@@ -96,7 +96,7 @@ const QrScanModal = ({ onClose, status, error, onScan }) => {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[200] p-4" onClick={onClose}>
-      <div className="w-full max-w-sm glass-card p-6 relative overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md glass-card p-5 relative overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-sky-500 to-indigo-500"></div>
 
         <div className="flex items-center justify-between mb-4">
