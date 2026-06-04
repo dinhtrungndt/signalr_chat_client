@@ -513,6 +513,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState(new Set());
   const [isDraggingSelection, setIsDraggingSelection] = useState(false);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
   
   const messagesEndRef = useRef(null);
   const typingTimerRef = useRef(null);
@@ -1164,7 +1165,11 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       <div 
         ref={messagesContainerRef}
         id="scrollable-messages-container"
-        className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-4 select-none"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-4 select-none custom-scrollbar"
+        onScroll={(e) => {
+          const { scrollTop, scrollHeight, clientHeight } = e.target;
+          setShowScrollBottom(scrollHeight - scrollTop - clientHeight > 300);
+        }}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
@@ -1271,6 +1276,21 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Nút Cuộn Xuống Cuối */}
+      {showScrollBottom && (
+        <button
+          onClick={() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className="absolute bottom-28 right-4 sm:right-8 z-40 w-10 h-10 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm text-indigo-600 dark:text-indigo-400 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition animate-fade-in-up hover:scale-105"
+          title="Cuộn xuống cuối"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </button>
+      )}
 
       {/* Batch Delete Undo Banner */}
       {batchDeleteState && (
