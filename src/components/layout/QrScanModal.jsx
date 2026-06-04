@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { useEffect } from 'react';
 
 const QrScanModal = ({ onClose, status, error, onScan }) => {
   useEffect(() => {
@@ -15,7 +15,7 @@ const QrScanModal = ({ onClose, status, error, onScan }) => {
         await html5QrCode.start(
           { facingMode: "environment" },
           {
-            fps: 30, // Tăng tốc độ quét (30 khung hình/giây)
+            fps: 60,
             formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE], // Chỉ quét QR Code để tối ưu hiệu suất thuật toán
             aspectRatio: 1.0,
             disableFlip: false
@@ -47,7 +47,7 @@ const QrScanModal = ({ onClose, status, error, onScan }) => {
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[200] p-4" onClick={onClose}>
       <div className="w-full max-w-sm glass-card p-6 relative overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-sky-500 to-indigo-500"></div>
-        
+
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">Quét mã QR</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition">
@@ -75,21 +75,21 @@ const QrScanModal = ({ onClose, status, error, onScan }) => {
                 {error}
               </div>
             )}
-            
+
             {/* Vùng chứa Scanner */}
             <div className="relative overflow-hidden rounded-2xl bg-slate-900 border-4 border-slate-100 dark:border-slate-800 w-full aspect-square flex items-center justify-center shadow-inner group">
               <div id="qr-reader" className="absolute inset-0 w-full h-full flex items-center justify-center"></div>
-              
+
               {/* Scanner Line Animation */}
               <div className="absolute top-0 left-4 right-4 h-0.5 bg-indigo-500 animate-scan z-10 shadow-[0_0_12px_3px_rgba(99,102,241,0.8)]"></div>
-              
+
               {/* Corner Accents */}
               <div className="absolute top-4 left-4 w-8 h-8 border-t-4 border-l-4 border-white/70 rounded-tl-lg z-10 transition-transform group-hover:scale-110"></div>
               <div className="absolute top-4 right-4 w-8 h-8 border-t-4 border-r-4 border-white/70 rounded-tr-lg z-10 transition-transform group-hover:scale-110"></div>
               <div className="absolute bottom-4 left-4 w-8 h-8 border-b-4 border-l-4 border-white/70 rounded-bl-lg z-10 transition-transform group-hover:scale-110"></div>
               <div className="absolute bottom-4 right-4 w-8 h-8 border-b-4 border-r-4 border-white/70 rounded-br-lg z-10 transition-transform group-hover:scale-110"></div>
             </div>
-            
+
             <p className="text-sm font-medium text-slate-600 dark:text-slate-400 text-center mt-2">
               Đưa mã QR trên màn hình đăng nhập vào khung hình để quét.
             </p>
