@@ -36,6 +36,8 @@ const renderTextWithLinks = (text) => {
   return parts.map((part, i) => {
     if (part.match(urlRegex)) {
       const href = part.startsWith('http') ? part : `http://${part}`;
+      // Cắt ngắn link nếu quá dài để giao diện gọn gàng hơn
+      const displayPart = part.length > 40 ? part.substring(0, 37) + '...' : part;
       return (
         <a 
           key={i} 
@@ -44,8 +46,9 @@ const renderTextWithLinks = (text) => {
           rel="noopener noreferrer"
           className="underline hover:opacity-80 transition-opacity break-all font-medium"
           onClick={(e) => e.stopPropagation()}
+          title={part} // Hiện tooltip toàn bộ link khi hover
         >
-          {part}
+          {displayPart}
         </a>
       );
     }
@@ -386,7 +389,15 @@ const MessageItem = ({
                   >
                     {preview.image && (
                       <div className="w-full h-32 bg-slate-100 dark:bg-slate-900 relative">
-                        <img src={preview.image} alt="Preview" className="w-full h-full object-cover" />
+                        <img 
+                          src={preview.image} 
+                          alt="Preview" 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => {
+                            // Ẩn ảnh nếu ảnh bị lỗi (như Facebook chặn hotlink)
+                            e.target.parentElement.style.display = 'none';
+                          }}
+                        />
                       </div>
                     )}
                     <div className="p-2.5">
