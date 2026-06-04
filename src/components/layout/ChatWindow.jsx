@@ -52,7 +52,12 @@ const renderTextWithLinks = (text) => {
   });
 };
 
-const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImageClick, onReact, onShowReactions, onDeleteForMe, isFirstInGroup = true, isLastInGroup = true }) => {
+const MessageItem = ({ 
+  message, isOwn, readers, isAdmin, 
+  onReply, onPin, onImageClick, onReact, onShowReactions, onDeleteForMe, 
+  isFirstInGroup = true, isLastInGroup = true,
+  isSelectionMode = false, isSelected = false, onToggleSelect = null, onEnableSelectionMode = null, isDraggingSelection = false
+}) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const countdownIntervalRef = useRef(null);
@@ -131,8 +136,32 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
   }
 
   return (
-    <div className={`flex items-end gap-2 ${isLastInGroup ? 'mb-3' : 'mb-1'} ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
-    {/* Avatar người gửi (chỉ hiện khi không phải mình) */}
+    <div 
+      className={`relative flex items-end group/select ${isSelectionMode ? 'cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/30 rounded-xl px-1 sm:px-2 py-0.5' : ''}`}
+      onClick={(e) => {
+        if (isSelectionMode && onToggleSelect) {
+          e.stopPropagation();
+          onToggleSelect(message.id);
+        }
+      }}
+      onMouseEnter={() => {
+        if (isSelectionMode && isDraggingSelection && onToggleSelect) {
+          onToggleSelect(message.id, true); // true = force add to selection during drag
+        }
+      }}
+    >
+      {/* Checkbox (hiện bên trái) */}
+      {isSelectionMode && (
+        <div className="w-8 sm:w-10 flex-shrink-0 flex items-center justify-center pb-2">
+          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'}`}>
+            {isSelected && <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+          </div>
+        </div>
+      )}
+
+      {/* Nội dung tin nhắn */}
+      <div className={`flex items-end gap-2 flex-1 min-w-0 ${isLastInGroup ? 'mb-3' : 'mb-1'} ${isOwn ? 'flex-row-reverse' : 'flex-row'} ${isSelectionMode ? 'pointer-events-none' : ''}`}>
+      {/* Avatar người gửi (chỉ hiện khi không phải mình) */}
     {!isOwn && (
       isLastInGroup ? (
         message.sender?.avatar ? (
@@ -233,6 +262,12 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
                 className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
               >
                 Xóa phía tôi
+              </button>
+              <button 
+                onClick={() => onEnableSelectionMode && onEnableSelectionMode(message.id)} 
+                className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors border-t border-slate-100 dark:border-slate-700/50"
+              >
+                Chọn nhiều
               </button>
             </div>
           </div>
@@ -370,6 +405,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
       )}
     </div>
     </div>
+    </div>
   );
 };
 
@@ -405,10 +441,17 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [previewImage, setPreviewImage] = useState(null);
   const [reactionsToShow, setReactionsToShow] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedMessages, setSelectedMessages] = useState(new Set());
+  const [isDraggingSelection, setIsDraggingSelection] = useState(false);
+  const [batchDeleteState, setBatchDeleteState] = useState(null);
+  
   const messagesEndRef = useRef(null);
   const typingTimerRef = useRef(null);
+  const batchDeleteIntervalRef = useRef(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const queryClient = useQueryClient();
 
   // Fetch lịch sử tin nhắn từ API
@@ -704,12 +747,183 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
     }
   };
 
+  const handleToggleSelectMessage = (messageId, forceAdd = false) => {
+    setSelectedMessages(prev => {
+      const next = new Set(prev);
+      if (forceAdd) {
+        next.add(messageId);
+      } else {
+        if (next.has(messageId)) next.delete(messageId);
+        else next.add(messageId);
+      }
+      return next;
+    });
+  };
+
+  const handleEnableSelectionMode = (messageId) => {
+    setIsSelectionMode(true);
+    setSelectedMessages(new Set([messageId]));
+  };
+
+  const handleCancelSelection = () => {
+    setIsSelectionMode(false);
+    setSelectedMessages(new Set());
+  };
+
+  const handleBatchCopy = async () => {
+    if (selectedMessages.size === 0) return;
+    
+    // Thu thập nội dung các tin nhắn văn bản đã chọn (Sắp xếp theo thứ tự hiển thị)
+    const textsToCopy = [...selectedMessages]
+      .map(id => messages.find(m => m.id === id))
+      .filter(m => m && m.type === 'TEXT')
+      .map(m => `[${formatTime(m.createdAt)}] ${m.sender?.fullName}: ${m.content}`);
+      
+    if (textsToCopy.length === 0) {
+      useUIStore.getState().showToast('Không có nội dung văn bản để copy.', 'warning');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(textsToCopy.join('\n'));
+      useUIStore.getState().showToast(`Đã copy ${textsToCopy.length} tin nhắn`, 'success');
+      handleCancelSelection();
+    } catch (e) {
+      useUIStore.getState().showToast('Lỗi copy.', 'error');
+    }
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedMessages.size === 0) return;
+    
+    const messagesToDelete = new Set(selectedMessages);
+    handleCancelSelection();
+
+    setBatchDeleteState({ messages: messagesToDelete, countdown: 5 });
+
+    if (batchDeleteIntervalRef.current) clearInterval(batchDeleteIntervalRef.current);
+    
+    batchDeleteIntervalRef.current = setInterval(() => {
+      setBatchDeleteState(prev => {
+        if (!prev) return null;
+        if (prev.countdown <= 1) {
+          clearInterval(batchDeleteIntervalRef.current);
+          
+          // Thực hiện xóa thực sự
+          const promises = [...prev.messages].map(id => messageApi.deleteForMe(id));
+          Promise.all(promises).catch(console.error);
+          [...prev.messages].forEach(id => {
+            useChatStore.getState().removeMessageForMe(activeConversation.type, activeConversation.id, id);
+          });
+          
+          return null;
+        }
+        return { ...prev, countdown: prev.countdown - 1 };
+      });
+    }, 1000);
+  };
+
+  const handleUndoBatchDelete = () => {
+    if (batchDeleteIntervalRef.current) clearInterval(batchDeleteIntervalRef.current);
+    setBatchDeleteState(null);
+  };
+
+  const handleBatchRecall = async () => {
+    if (selectedMessages.size === 0) return;
+    
+    // Lọc ra các tin nhắn của chính mình
+    const myMsgIds = [...selectedMessages].filter(id => {
+      const msg = messages.find(m => m.id === id);
+      return msg && msg.senderId === currentUser.id;
+    });
+
+    if (myMsgIds.length === 0) {
+      useUIStore.getState().showToast('Chỉ có thể thu hồi tin nhắn do bạn gửi.', 'error');
+      return;
+    }
+
+    if (await useUIStore.getState().confirm('Thu hồi tin nhắn', `Bạn sắp thu hồi ${myMsgIds.length} tin nhắn của mình. Có chắc chắn không?`)) {
+      try {
+        const promises = myMsgIds.map(id => messageApi.recallMessage(id));
+        await Promise.all(promises);
+        handleCancelSelection();
+      } catch (error) {
+        useUIStore.getState().showToast('Có lỗi xảy ra khi thu hồi.', 'error');
+      }
+    }
+  };
+
+  // Drag to select Handlers cho chuột
+  const handleMouseDown = (e) => {
+    if (isSelectionMode && e.button === 0) {
+      setIsDraggingSelection(true);
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (isSelectionMode) {
+      setIsDraggingSelection(false);
+    }
+  };
+
+  // Drag to select Handlers cho Touch (Mobile)
+  const handleTouchMove = (e) => {
+    if (!isSelectionMode || !isDraggingSelection) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    
+    // Tìm message id từ id element
+    if (el) {
+      const msgWrapper = el.closest('[id^="msg-"]');
+      if (msgWrapper) {
+        const idStr = msgWrapper.id.replace('msg-', '');
+        // Kiểm tra xem ID có phải số không
+        const id = /^\d+$/.test(idStr) ? parseInt(idStr) : idStr;
+        if (id) {
+           handleToggleSelectMessage(id, true);
+        }
+      }
+    }
+  };
+
   if (!activeConversation) return null;
 
   return (
     <div className="flex flex-col h-full min-w-0">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl">
+      {/* Header hoặc Selection Toolbar */}
+      {isSelectionMode ? (
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-slate-200/70 dark:border-slate-700/70 bg-indigo-50 dark:bg-slate-800/80 backdrop-blur-xl animate-fade-in z-30">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={handleCancelSelection}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <span className="font-semibold text-slate-800 dark:text-white">
+              Đã chọn: <span className="text-indigo-600 dark:text-indigo-400">{selectedMessages.size}</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button onClick={handleBatchCopy} className="p-2 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition flex items-center gap-1" title="Sao chép văn bản">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+              <span className="hidden sm:inline">Sao chép</span>
+            </button>
+            <button onClick={() => useUIStore.getState().showToast('Chức năng chia sẻ đang phát triển', 'info')} className="p-2 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+              <span className="hidden sm:inline">Chia sẻ</span>
+            </button>
+            <button onClick={handleBatchRecall} className="p-2 text-amber-600 dark:text-amber-400 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition flex items-center gap-1">
+              <span className="hidden sm:inline">Thu hồi</span>
+            </button>
+            <button onClick={handleBatchDelete} className="p-2 text-red-600 dark:text-red-400 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              <span className="hidden sm:inline">Xóa</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl z-30">
         {/* Mobile: nút mở sidebar */}
         <button
           onClick={onOpenSidebar}
@@ -771,6 +985,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
           </svg>
         </button>
       </div>
+      )}
 
       {/* Group Members Modal */}
       <GroupMembersModal
@@ -857,7 +1072,20 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       )}
 
       {/* Vùng tin nhắn */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-4">
+      <div 
+        ref={messagesContainerRef}
+        id="scrollable-messages-container"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-4 select-none"
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onTouchStart={(e) => {
+          if (isSelectionMode) setIsDraggingSelection(true);
+        }}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleMouseUp}
+        onTouchCancel={handleMouseUp}
+      >
         {/* Nút tải thêm tin cũ */}
         {hasNextPage && (
           <div className="flex justify-center mb-4">
@@ -873,6 +1101,8 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
         )}
 
         {messages.map((msg, index) => {
+          if (batchDeleteState?.messages.has(msg.id)) return null;
+
           const prevMsg = messages[index - 1];
           const nextMsg = messages[index + 1];
 
@@ -919,6 +1149,11 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
               }}
               isFirstInGroup={isFirstInGroup}
               isLastInGroup={isLastInGroup}
+              isSelectionMode={isSelectionMode}
+              isSelected={selectedMessages.has(msg.id)}
+              onToggleSelect={handleToggleSelectMessage}
+              onEnableSelectionMode={handleEnableSelectionMode}
+              isDraggingSelection={isDraggingSelection}
             />
           );
         })}
@@ -937,6 +1172,16 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Batch Delete Undo Banner */}
+      {batchDeleteState && (
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 animate-fade-in-up">
+          <div className="bg-slate-800 text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-4 border border-slate-700">
+            <span className="text-sm">Đang xóa {batchDeleteState.messages.size} tin nhắn trong <span className="font-bold text-red-400">{batchDeleteState.countdown}s</span>...</span>
+            <button onClick={handleUndoBatchDelete} className="text-sm font-bold text-indigo-400 hover:text-indigo-300 transition uppercase tracking-wider">Hoàn tác</button>
+          </div>
+        </div>
+      )}
 
       {/* Input gửi tin nhắn */}
       {activeConversation.type === 'group' && activeConversation.isReadOnly && activeConversation.role === 'MEMBER' ? (
