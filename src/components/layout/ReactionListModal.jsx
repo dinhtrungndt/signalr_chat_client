@@ -40,7 +40,7 @@ const ReactionListModal = ({ isOpen, onClose, reactions }) => {
               <div key={index} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition">
                 <div className="relative">
                   {r.user?.avatar ? (
-                    <img src={r.user.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
+                    <img src={`${process.env.REACT_APP_SOCKET_URL}${r.user.avatar}`} alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-bold text-sm">
                       {r.user?.fullName?.charAt(0) || '?'}
