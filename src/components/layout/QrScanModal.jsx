@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 const QrScanModal = ({ onClose, status, error, onScan }) => {
   useEffect(() => {
@@ -15,9 +15,10 @@ const QrScanModal = ({ onClose, status, error, onScan }) => {
         await html5QrCode.start(
           { facingMode: "environment" },
           {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0
+            fps: 30, // Tăng tốc độ quét (30 khung hình/giây)
+            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE], // Chỉ quét QR Code để tối ưu hiệu suất thuật toán
+            aspectRatio: 1.0,
+            disableFlip: false
           },
           (decodedText) => {
             if (isScanned) return;
