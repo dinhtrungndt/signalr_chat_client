@@ -16,6 +16,17 @@ import socketService from '../../services/socket.service';
 import useAuthStore from '../../stores/auth.store';
 import useChatStore from '../../stores/chat.store';
 import { useUIStore } from '../../stores/ui.store';
+import EmojiPicker from 'emoji-picker-react';
+import useThemeStore from '../../stores/theme.store'; // For emoji-picker-react theme
+
+const STICKER_CATEGORIES = [
+  { label: 'Gần đây', query: '' },
+  { label: 'Ami Cat', query: 'ami cat' },
+  { label: 'QooBee', query: 'qoobee' },
+  { label: 'Meme', query: 'meme' },
+  { label: 'Pepe', query: 'pepe frog' },
+  { label: 'Pikachu', query: 'pikachu' },
+];
 
 const formatTime = (dateStr) => {
   try {
@@ -433,12 +444,14 @@ const MessageItem = ({
         {message.type === 'IMAGE' && (() => {
           const urls = message.content.split('|');
           if (urls.length === 1) {
+            const isExternal = urls[0].startsWith('http');
+            const imgUrl = isExternal ? urls[0] : `${process.env.REACT_APP_SOCKET_URL}${urls[0]}`;
             return (
               <img 
-                src={`${process.env.REACT_APP_SOCKET_URL}${urls[0]}`} 
-                alt="Image" 
-                className="max-w-xs sm:max-w-sm rounded-xl object-contain cursor-pointer max-h-64"
-                onClick={() => onImageClick({ url: `${process.env.REACT_APP_SOCKET_URL}${urls[0]}`, message, isOwn })}
+                src={imgUrl} 
+                alt={isExternal ? "Sticker" : "Image"} 
+                className={`rounded-xl object-contain ${isExternal ? 'w-24 h-24 sm:w-32 sm:h-32' : 'max-w-xs sm:max-w-sm max-h-64 cursor-pointer'}`}
+                onClick={() => !isExternal && onImageClick({ url: imgUrl, message, isOwn })}
               />
             );
           } else {
@@ -446,22 +459,26 @@ const MessageItem = ({
             const gridCols = urls.length === 2 ? 'grid-cols-2' : 'grid-cols-3';
             return (
               <div className={`grid gap-1 ${gridCols} max-w-[260px] sm:max-w-xs overflow-hidden rounded-2xl ${isOwn ? 'rounded-br-sm' : 'rounded-bl-sm'} border border-slate-200/50 dark:border-slate-700/50`}>
-                {urls.map((url, idx) => (
-                  <img
-                    key={idx}
-                    src={`${process.env.REACT_APP_SOCKET_URL}${url}`}
-                    alt="Image"
-                    className="w-full h-24 sm:h-32 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
-                    onClick={() => onImageClick({ url: `${process.env.REACT_APP_SOCKET_URL}${url}`, message, isOwn })}
-                  />
-                ))}
+                {urls.map((url, idx) => {
+                  const isExternal = url.startsWith('http');
+                  const imgUrl = isExternal ? url : `${process.env.REACT_APP_SOCKET_URL}${url}`;
+                  return (
+                    <img
+                      key={idx}
+                      src={imgUrl}
+                      alt="Image"
+                      className="w-full h-24 sm:h-32 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                      onClick={() => onImageClick({ url: imgUrl, message, isOwn })}
+                    />
+                  );
+                })}
               </div>
             );
           }
         })()}
         {message.type === 'FILE' && (
           <a 
-            href={`${process.env.REACT_APP_SOCKET_URL}${message.content}`}
+            href={message.content.startsWith('http') ? message.content : `${process.env.REACT_APP_SOCKET_URL}${message.content}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 underline"
@@ -534,6 +551,7 @@ const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
 
 const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
+  const { theme } = useThemeStore();
   const activeConversation = useChatStore((s) => s.activeConversation);
   const onlineUsers = useChatStore((s) => s.onlineUsers);
   const userLastSeen = useChatStore((s) => s.userLastSeen);
@@ -566,6 +584,10 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [reactionsToShow, setReactionsToShow] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [readersToShow, setReadersToShow] = useState(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiTab, setEmojiTab] = useState('EMOJI'); // 'STICKER' or 'EMOJI'
+  const [stickers, setStickers] = useState([]);
+  const [stickerQuery, setStickerQuery] = useState('');
   const [batchDeleteState, setBatchDeleteState] = useState(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState(new Set());
@@ -629,6 +651,30 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       useUIStore.getState().showAlert('Không thể bỏ ghim tin nhắn.', 'error');
     }
   };
+
+
+
+  useEffect(() => {
+    if (emojiTab !== 'STICKER' || !showEmojiPicker) return;
+    let isMounted = true;
+    const fetchStickers = async () => {
+      try {
+        const query = stickerQuery.trim() ? encodeURIComponent(stickerQuery + ' sticker') : 'cute+cat+sticker';
+        const res = await fetch(`https://g.tenor.com/v1/search?q=${query}&key=LIVDSRZULELA&limit=30`);
+        const data = await res.json();
+        if (isMounted && data.results) {
+          setStickers(data.results.map(r => r.media[0].tinygif.url));
+        }
+      } catch (e) {
+        console.error('Failed to fetch stickers:', e);
+      }
+    };
+    const timer = setTimeout(fetchStickers, 500);
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [stickerQuery, emojiTab, showEmojiPicker]);
 
   // Khi load trang đầu, khởi tạo tin nhắn vào store
   useEffect(() => {
@@ -793,6 +839,23 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
     } catch (error) {
       console.error('Lỗi khi tải lên file thu âm:', error);
       useUIStore.getState().showAlert('Gửi tin nhắn giọng nói thất bại. Vui lòng thử lại.', 'error');
+    }
+  };
+
+  const handleSendSticker = async (stickerUrl) => {
+    try {
+      const replyToId = replyingTo ? replyingTo.id : null;
+      if (activeConversation.type === 'group') {
+        await socketService.sendGroupMessage(activeConversation.id, stickerUrl, 'IMAGE', replyToId);
+      } else {
+        const msg = await socketService.sendDirectMessage(activeConversation.id, stickerUrl, 'IMAGE', replyToId);
+        useChatStore.getState().addMessage('direct', activeConversation.id, msg);
+      }
+      setShowEmojiPicker(false);
+      setReplyingTo(null);
+    } catch (error) {
+      console.error(error);
+      useUIStore.getState().showAlert('Có lỗi khi gửi nhãn dán!', 'error');
     }
   };
 
@@ -1368,7 +1431,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
           </p>
         </div>
       ) : (
-        <div className="px-3 sm:px-4 py-3 border-t border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl relative">
+        <div className="px-3 sm:px-4 py-3 border-t border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl relative z-50">
           {/* Banner cảnh báo cho Trưởng/Phó nhóm */}
           {activeConversation.type === 'group' && activeConversation.isReadOnly && (
             <div className="absolute -top-7 left-1/2 -translate-x-1/2 flex justify-center pointer-events-none z-10">
@@ -1530,16 +1593,117 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
               </button>
             ) : (
               !isRecording && (
-                <button
-                  onClick={() => setIsRecording(true)}
-                  className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 active:scale-95 transition-all duration-150"
-                  type="button"
-                  title="Ghi âm giọng nói"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl transition-all duration-150 ${showEmojiPicker ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 active:scale-95'}`}
+                      type="button"
+                      title="Biểu tượng cảm xúc"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </button>
+                    {showEmojiPicker && (
+                      <>
+                        <div className="fixed inset-0 z-[90]" onClick={() => setShowEmojiPicker(false)} />
+                        <div className="absolute bottom-full right-[-10px] sm:right-0 mb-3 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 w-[300px] sm:w-[350px] max-w-[calc(100vw-24px)] h-[350px] sm:h-[400px] z-[100] animate-fade-in-up flex flex-col overflow-hidden">
+                          {/* Tabs */}
+                          <div className="flex items-center border-b border-slate-200 dark:border-slate-700">
+                            <button
+                              onClick={() => setEmojiTab('STICKER')}
+                              className={`flex-1 py-3 text-sm font-semibold transition-colors ${emojiTab === 'STICKER' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                            >
+                              STICKER
+                            </button>
+                            <button
+                              onClick={() => setEmojiTab('EMOJI')}
+                              className={`flex-1 py-3 text-sm font-semibold transition-colors ${emojiTab === 'EMOJI' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                            >
+                              EMOJI
+                            </button>
+                          </div>
+                          
+                          {/* Content */}
+                          <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-900/50">
+                            {emojiTab === 'EMOJI' ? (
+                              <div className="w-full h-full flex items-center justify-center -m-[1px]">
+                                <EmojiPicker
+                                  onEmojiClick={(emojiData) => {
+                                    setInputText(prev => prev + emojiData.emoji);
+                                  }}
+                                  width="100%"
+                                  height="100%"
+                                  theme={theme === 'dark' ? 'dark' : 'light'}
+                                  searchPlaceHolder="Tìm kiếm Emoji..."
+                                  skinTonesDisabled
+                                  emojiStyle="native"
+                                />
+                              </div>
+                            ) : (
+                              <div className="flex flex-col h-full bg-white dark:bg-slate-900">
+                                <div className="p-2 border-b border-slate-100 dark:border-slate-800">
+                                  <div className="relative mb-2">
+                                    <input 
+                                      type="text" 
+                                      placeholder="Tìm kiếm nhãn dán..." 
+                                      value={stickerQuery}
+                                      onChange={(e) => setStickerQuery(e.target.value)}
+                                      className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none"
+                                    />
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                  </div>
+                                  {/* Phân loại */}
+                                  <div className="flex gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
+                                    {STICKER_CATEGORIES.map(cat => (
+                                      <button
+                                        key={cat.label}
+                                        onClick={() => setStickerQuery(cat.query)}
+                                        className={`whitespace-nowrap px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${
+                                          (stickerQuery === cat.query || (!stickerQuery && !cat.query))
+                                            ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400'
+                                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                        }`}
+                                      >
+                                        {cat.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 grid grid-cols-4 gap-2">
+                                  {stickers.map((stickerUrl, idx) => (
+                                    <button
+                                      key={`sticker_${idx}`}
+                                      onClick={() => handleSendSticker(stickerUrl)}
+                                      className="aspect-square flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-sm rounded-xl p-1 transition-all group cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                                    >
+                                      <img src={stickerUrl} alt="sticker" className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
+                                    </button>
+                                  ))}
+                                  {stickers.length === 0 && (
+                                    <div className="col-span-4 py-8 text-center text-sm text-slate-400">Đang tìm kiếm...</div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  
+                  <button
+                    onClick={() => setIsRecording(true)}
+                    className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 active:scale-95 transition-all duration-150"
+                    type="button"
+                    title="Ghi âm giọng nói"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                  </button>
+                </div>
               )
             )}
               </>
