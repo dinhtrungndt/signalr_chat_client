@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useEffect, useState, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import groupApi from '../../api/group.api';
 import userApi from '../../api/user.api';
 import useDebounce from '../../hooks/useDebounce';
@@ -10,8 +11,10 @@ import useChatStore from '../../stores/chat.store';
 import { useUIStore } from '../../stores/ui.store';
 import CreateGroupModal from './CreateGroupModal';
 import ProfileModal from './ProfileModal';
+import QrScanModal from './QrScanModal';
 import useThemeStore from '../../stores/theme.store';
 import messageApi from '../../api/message.api';
+import authApi from '../../api/auth.api';
 
 const formatTime = (dateStr) => {
   try {
@@ -217,6 +220,10 @@ const Sidebar = ({ onItemClick }) => {
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isQrScanOpen, setIsQrScanOpen] = useState(false);
+  const [qrScanSessionId, setQrScanSessionId] = useState('');
+  const [qrScanStatus, setQrScanStatus] = useState('idle'); // idle, loading, success, error
+  const [qrScanError, setQrScanError] = useState('');
   
   // Clear conversation state
   const [clearState, setClearState] = useState(null);
@@ -485,6 +492,16 @@ const Sidebar = ({ onItemClick }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 Hồ sơ cá nhân
+              </button>
+
+              <button
+                onClick={() => { setIsUserMenuOpen(false); setIsQrScanOpen(true); }}
+                className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-3"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+                Quét đăng nhập
               </button>
               
               <div className="border-t border-slate-100 dark:border-slate-700 my-1"></div>
@@ -811,6 +828,28 @@ const Sidebar = ({ onItemClick }) => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* QR Scan Login Modal */}
+      {isQrScanOpen && createPortal(
+        <QrScanModal
+          onClose={() => { setIsQrScanOpen(false); setQrScanStatus('idle'); setQrScanError(''); }}
+          status={qrScanStatus}
+          error={qrScanError}
+          onScan={async (sessionId) => {
+            setQrScanStatus('loading');
+            setQrScanError('');
+            try {
+              await authApi.authorizeQrSession(sessionId);
+              setQrScanStatus('success');
+              setTimeout(() => { setIsQrScanOpen(false); setQrScanStatus('idle'); setQrScanError(''); }, 2000);
+            } catch (err) {
+              setQrScanStatus('error');
+              setQrScanError(err.response?.data?.message || 'Không thể xác nhận. Mã có thể đã hết hạn.');
+            }
+          }}
+        />,
+        document.body
       )}
     </div>
   );
