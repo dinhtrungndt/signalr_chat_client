@@ -7,6 +7,7 @@ import ReactionListModal from './ReactionListModal';
 import UserProfileModal from './UserProfileModal';
 import ImageViewerModal from './ImageViewerModal';
 import ShareMessageModal from './ShareMessageModal';
+import MessageReadersModal from './MessageReadersModal';
 import AudioRecorder from './AudioRecorder';
 import WaveformPlayer from '../common/WaveformPlayer';
 import messageApi from '../../api/message.api';
@@ -55,7 +56,7 @@ const renderTextWithLinks = (text) => {
 
 const MessageItem = ({ 
   message, isOwn, readers, isAdmin, 
-  onReply, onPin, onShare, onImageClick, onReact, onShowReactions, onDeleteForMe, 
+  onReply, onPin, onShare, onImageClick, onReact, onShowReactions, onShowReaders, onDeleteForMe, 
   isFirstInGroup = true, isLastInGroup = true,
   isSelectionMode = false, isSelected = false, onToggleSelect = null, onEnableSelectionMode = null, isDraggingSelection = false
 }) => {
@@ -412,7 +413,10 @@ const MessageItem = ({
 
       {/* Read Receipts */}
       {readers?.length > 0 && (
-        <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end mr-1' : 'justify-start ml-1'}`}>
+        <div 
+          onClick={() => onShowReaders && onShowReaders(readers)}
+          className={`flex items-center gap-1 mt-1 cursor-pointer hover:opacity-80 transition-opacity ${isOwn ? 'justify-end mr-1' : 'justify-start ml-1'}`}
+        >
           {readers.slice(0, 3).map((reader, index) => (
             <div key={index} className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 border border-white flex items-center justify-center text-[7px] font-bold text-white shadow-sm" title={`Đã xem bởi ${reader.fullName}`}>
                {reader.fullName?.charAt(0) || '?'}
@@ -463,10 +467,11 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [previewImage, setPreviewImage] = useState(null);
   const [reactionsToShow, setReactionsToShow] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [readersToShow, setReadersToShow] = useState(null);
+  const [batchDeleteState, setBatchDeleteState] = useState(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState(new Set());
   const [isDraggingSelection, setIsDraggingSelection] = useState(false);
-  const [batchDeleteState, setBatchDeleteState] = useState(null);
   
   const messagesEndRef = useRef(null);
   const typingTimerRef = useRef(null);
@@ -1164,6 +1169,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
               }}
               onImageClick={setPreviewImage} 
               onShowReactions={setReactionsToShow}
+              onShowReaders={setReadersToShow}
               onReact={(message, emoji) => {
                 socketService.reactMessage(
                   message.id,
@@ -1412,6 +1418,13 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
         onClose={() => setIsShareModalOpen(false)}
         messagesToShare={messagesToShare}
         onSuccess={handleCancelSelection}
+      />
+
+      {/* Render Message Readers Modal */}
+      <MessageReadersModal
+        isOpen={!!readersToShow}
+        onClose={() => setReadersToShow(null)}
+        readers={readersToShow}
       />
     </div>
   );
