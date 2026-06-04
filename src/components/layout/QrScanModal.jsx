@@ -15,10 +15,16 @@ const QrScanModal = ({ onClose, status, error, onScan }) => {
         await html5QrCode.start(
           { facingMode: "environment" },
           {
-            fps: 60,
-            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE], // Chỉ quét QR Code để tối ưu hiệu suất thuật toán
+            fps: 30, // 30 fps là tối ưu nhất cho web
+            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE], // Chỉ quét QR Code
             aspectRatio: 1.0,
-            disableFlip: false
+            disableFlip: false,
+            useBarCodeDetectorIfSupported: true, // Dùng phần cứng (nếu trình duyệt hỗ trợ) -> Siêu nhanh như Zalo
+            qrbox: (viewfinderWidth, viewfinderHeight) => {
+              // Focus CPU vào 75% ở giữa màn hình (như Zalo), giảm diện tích phân tích ảnh -> Quét nhanh gấp đôi
+              const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.75);
+              return { width: size, height: size };
+            }
           },
           (decodedText) => {
             if (isScanned) return;
