@@ -373,7 +373,7 @@ const MessageItem = ({
           message.type === 'RECALLED' ? 'px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-dashed text-slate-400 dark:text-slate-500 italic' : 'px-4 py-2.5',
           'rounded-2xl text-sm leading-relaxed break-words',
           message.type === 'RECALLED' ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') : 
-          (message.type === 'IMAGE' || message.type === 'AUDIO') ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') :
+          (message.type === 'IMAGE') ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') :
           (isOwn ? 'msg-mine rounded-br-sm' : 'msg-other rounded-bl-sm'),
           !isOwn && message.type !== 'RECALLED' && message.senderRole === 'ADMIN' ? 'border-[1px] border-amber-300/60 dark:border-amber-700/60' : '',
           !isOwn && message.type !== 'RECALLED' && message.senderRole === 'DEPUTY' ? 'border-[1px] border-slate-300 dark:border-slate-600' : ''
