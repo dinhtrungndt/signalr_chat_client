@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useUIStore } from '../../stores/ui.store';
@@ -106,8 +107,8 @@ const ImageViewerModal = ({ previewData, onClose, onGoToMessage }) => {
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-[#000000] text-slate-300 select-none animate-fade-in">
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 z-[9999] flex flex-col bg-[#000000] text-slate-300 select-none animate-fade-in">
       {/* Nút Đóng (Góc trên phải) */}
       <button 
         onClick={onClose}
@@ -223,7 +224,8 @@ const ImageViewerModal = ({ previewData, onClose, onGoToMessage }) => {
           )}
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };
 

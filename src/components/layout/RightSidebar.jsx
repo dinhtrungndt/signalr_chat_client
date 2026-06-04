@@ -5,6 +5,7 @@ import useAuthStore from '../../stores/auth.store';
 import { useUIStore } from '../../stores/ui.store';
 import useChatStore from '../../stores/chat.store';
 import GroupMembersModal from './GroupMembersModal';
+import ImageViewerModal from './ImageViewerModal';
 const EMPTY_ARRAY = [];
 
 const RightSidebar = ({ onClose, onImageClick }) => {
@@ -27,6 +28,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
   const [isMediaOpen, setIsMediaOpen] = useState(true);
   const [isFileOpen, setIsFileOpen] = useState(false);
   const [isSettingOpen, setIsSettingOpen] = useState(true);
+  const [lightboxUrl, setLightboxUrl] = useState(null);
 
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
@@ -47,7 +49,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
           if (msg.content) {
             const urls = msg.content.split('|');
             urls.forEach(url => {
-              extractedUrls.push({ url, id: msg.id });
+              extractedUrls.push({ url, id: msg.id, message: msg });
             });
           }
         });
@@ -247,7 +249,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                   {media.length > 0 ? (
                     <div className="grid grid-cols-3 gap-1.5">
                       {media.map((img, idx) => (
-                        <div key={`${img.id}-${idx}`} className="aspect-square bg-slate-200 dark:bg-slate-700 rounded-md overflow-hidden cursor-pointer hover:opacity-90 transition" onClick={() => onImageClick(`${process.env.REACT_APP_SOCKET_URL}${img.url}`)}>
+                        <div key={`${img.id}-${idx}`} className="aspect-square bg-slate-200 dark:bg-slate-700 rounded-md overflow-hidden cursor-zoom-in hover:opacity-90 transition" onClick={() => setLightboxUrl({ url: `${process.env.REACT_APP_SOCKET_URL}${img.url}`, message: img.message })}>
                           <img src={`${process.env.REACT_APP_SOCKET_URL}${img.url}`} alt="" className="w-full h-full object-cover" />
                         </div>
                       ))}
@@ -342,6 +344,14 @@ const RightSidebar = ({ onClose, onImageClick }) => {
           onClose={() => setIsMembersModalOpen(false)}
           groupId={activeConversation.id}
           groupName={activeConversation.name}
+        />
+      )}
+
+      {/* Image Viewer Modal - dùng lại component chuẩn giống trong chat */}
+      {lightboxUrl && (
+        <ImageViewerModal
+          previewData={lightboxUrl}
+          onClose={() => setLightboxUrl(null)}
         />
       )}
     </div>
