@@ -60,6 +60,14 @@ const useAuthStore = create((set) => ({
     return data;
   },
 
+  qrLogin: (authData) => {
+    const { user, accessToken, refreshToken } = authData;
+    tokenStorage.set(accessToken);
+    saveRefreshToken(refreshToken);
+    set({ user, isAuthenticated: true });
+    setTimeout(() => registerPushSubscription(), 1000);
+  },
+
   updateUser: (user) => set({ user }),
 
   checkAuth: async () => {
