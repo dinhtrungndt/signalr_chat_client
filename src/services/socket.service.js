@@ -184,6 +184,25 @@ const socketService = {
     });
 
     // ==========================================
+    // SỰ KIỆN LINK PREVIEW ĐÃ SẴN SÀNG
+    // ==========================================
+    socket.on('link_preview_ready', (data) => {
+      // data = { messageId, linkPreview }
+      // Vì không biết rõ group hay direct ở mức này (trừ khi data gửi kèm groupId),
+      // Cập nhật lên store sẽ quét qua conversation hiện tại.
+      // Tuy nhiên để tối ưu, socket emit ở server đã gửi riêng vô group/direct room, ta lấy thông tin conversation đang mở
+      const activeConversation = useChatStore.getState().activeConversation;
+      if (activeConversation) {
+        useChatStore.getState().updateMessage(
+          activeConversation.type, 
+          activeConversation.id, 
+          data.messageId, 
+          { linkPreview: data.linkPreview }
+        );
+      }
+    });
+
+    // ==========================================
     // SỰ KIỆN GHIM TIN NHẮN
     // ==========================================
     socket.on('message_pinned', (pin) => {

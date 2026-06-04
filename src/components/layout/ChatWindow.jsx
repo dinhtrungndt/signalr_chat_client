@@ -371,7 +371,37 @@ const MessageItem = ({
           </div>
         )}
 
-        {message.type === 'TEXT' && renderTextWithLinks(message.content)}
+        {message.type === 'TEXT' && (
+          <div className="flex flex-col">
+            <div>{renderTextWithLinks(message.content)}</div>
+            {message.linkPreview && (() => {
+              try {
+                const preview = JSON.parse(message.linkPreview);
+                return (
+                  <a 
+                    href={preview.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={`block mt-2 w-[240px] sm:w-[280px] bg-white dark:bg-slate-800 border ${isOwn ? 'border-indigo-200/50 dark:border-indigo-700/50' : 'border-slate-200 dark:border-slate-700'} rounded-xl overflow-hidden hover:opacity-90 transition shadow-sm`}
+                  >
+                    {preview.image && (
+                      <div className="w-full h-32 bg-slate-100 dark:bg-slate-900 relative">
+                        <img src={preview.image} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <div className="p-2.5">
+                      <h4 className="font-bold text-[13px] text-slate-800 dark:text-slate-200 line-clamp-2 leading-snug">{preview.title || preview.domain}</h4>
+                      {preview.description && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-snug">{preview.description}</p>
+                      )}
+                      <p className="text-[10px] text-indigo-500 dark:text-indigo-400 font-medium mt-1.5 uppercase tracking-wide">{preview.domain}</p>
+                    </div>
+                  </a>
+                );
+              } catch (e) { return null; }
+            })()}
+          </div>
+        )}
         {message.type === 'RECALLED' && message.content}
         {message.type === 'IMAGE' && (() => {
           const urls = message.content.split('|');
