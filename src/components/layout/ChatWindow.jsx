@@ -51,7 +51,38 @@ const renderTextWithLinks = (text) => {
   });
 };
 
-const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImageClick, onReact, onShowReactions, isFirstInGroup = true, isLastInGroup = true }) => {
+const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImageClick, onReact, onShowReactions, onDeleteForMe, isFirstInGroup = true, isLastInGroup = true }) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteTimeout, setDeleteTimeout] = useState(null);
+
+  const handleDeleteForMe = () => {
+    setIsDeleting(true);
+    useUIStore.getState().showToast('Tin nhắn sẽ bị xóa ở phía bạn trong 5s...', 'warning');
+    const timeout = setTimeout(() => {
+      onDeleteForMe(message.id);
+    }, 5000);
+    setDeleteTimeout(timeout);
+  };
+
+  const handleUndoDelete = () => {
+    clearTimeout(deleteTimeout);
+    setIsDeleting(false);
+    setDeleteTimeout(null);
+    useUIStore.getState().showToast('Đã hủy xóa tin nhắn.', 'info');
+  };
+
+  if (isDeleting) {
+    return (
+      <div className="flex justify-center w-full my-2 animate-fade-in">
+        <span className="text-xs font-medium bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 px-4 py-2 rounded-full flex items-center gap-3 shadow-sm">
+          Tin nhắn sẽ bị xóa ở phía bạn...
+          <button onClick={handleUndoDelete} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-bold hover:underline">
+            Hoàn tác
+          </button>
+        </span>
+      </div>
+    );
+  }
   if (message.type === 'SYSTEM') {
     let content = message.content;
     let isSilent = false;
@@ -90,7 +121,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
 
     <div className="max-w-[78%] sm:max-w-[70%] group relative" id={`msg-${message.id}`}>
       {/* Nút Hành Động (hiển thị khi hover) */}
-      <div className={`absolute top-1/2 -translate-y-1/2 ${isOwn ? 'right-full mr-2' : 'left-full ml-2'} opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 z-20`}>
+      <div className={`absolute top-1/2 -translate-y-1/2 ${isOwn ? 'right-full mr-2 flex-row' : 'left-full ml-2 flex-row-reverse'} opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 z-20`}>
         {/* Nút Trả Lời (hiện cho mọi tin nhắn chưa thu hồi) */}
         {message.type !== 'RECALLED' && (
           <button
@@ -104,35 +135,6 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
           </button>
         )}
 
-        {/* Nút Ghim */}
-        {message.type !== 'RECALLED' && (
-          <button
-            onClick={() => onPin(message)}
-            className="p-1 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-full"
-            title="Ghim tin nhắn"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg>
-          </button>
-        )}
-        
-        {/* Nút Thu Hồi (chỉ cho tin nhắn của mình) */}
-        {isOwn && message.type !== 'RECALLED' && (
-          <button
-            onClick={async () => {
-              if (await useUIStore.getState().confirm('Thu hồi tin nhắn', 'Bạn có chắc chắn muốn thu hồi tin nhắn này?')) {
-                messageApi.recallMessage(message.id).catch(console.error);
-              }
-            }}
-            className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full"
-            title="Thu hồi tin nhắn"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
-        )}
         {/* Nút Thả cảm xúc */}
         {message.type !== 'RECALLED' && (
           <div className="relative group/react">
@@ -144,14 +146,14 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
-            {/* Glassmorphism Reaction Picker (đã đổi sang bottom-full để bật lên trên) */}
-            <div className="absolute bottom-full right-0 pb-1 hidden group-hover/react:block z-50 animate-fade-in-up w-max">
-              <div className="flex items-center gap-1 p-1.5 bg-white/80 dark:bg-slate-800/90 backdrop-blur-md border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-full">
+            {/* Glassmorphism Reaction Picker */}
+            <div className={`absolute bottom-full pb-1 ${isOwn ? 'right-0' : 'left-0'} hidden group-hover/react:block z-50 animate-fade-in-up w-max`}>
+              <div className="grid grid-cols-3 gap-1 p-1.5 bg-white/80 dark:bg-slate-800/90 backdrop-blur-md border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-xl">
                 {EMOJIS.map(emoji => (
                   <button
                     key={emoji}
                     onClick={() => onReact(message, emoji)}
-                    className="w-8 h-8 flex items-center justify-center text-xl hover:scale-125 hover:-translate-y-1 transition-transform cursor-pointer"
+                    className="w-6 h-6 flex items-center justify-center text-lg hover:scale-125 hover:-translate-y-1 transition-transform cursor-pointer"
                     title={emoji}
                   >
                     {emoji}
@@ -161,6 +163,52 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
             </div>
           </div>
         )}
+
+        {/* Menu 3 Chấm */}
+        <div className="relative group/more">
+          <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors" title="Thêm tùy chọn">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+            </svg>
+          </button>
+          {/* Dropdown Box */}
+          <div className={`absolute bottom-full pb-1 ${isOwn ? 'right-0' : 'left-0'} hidden group-hover/more:block z-50 animate-fade-in-up w-max`}>
+            <div className="bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden py-1.5 w-40 flex flex-col">
+              <button 
+                onClick={() => navigator.clipboard.writeText(message.type === 'TEXT' ? message.content : 'Tin nhắn')} 
+                className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors"
+              >
+                Copy tin nhắn
+              </button>
+              {message.type !== 'RECALLED' && (
+                <button 
+                  onClick={() => onPin(message)} 
+                  className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors"
+                >
+                  Ghim tin nhắn
+                </button>
+              )}
+              {isOwn && message.type !== 'RECALLED' && (
+                <button 
+                  onClick={async () => {
+                    if (await useUIStore.getState().confirm('Thu hồi tin nhắn', 'Bạn có chắc chắn muốn thu hồi tin nhắn này với mọi người?')) {
+                      messageApi.recallMessage(message.id).catch(console.error);
+                    }
+                  }} 
+                  className="w-full text-left px-3 py-2 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-2 transition-colors"
+                >
+                  Thu hồi
+                </button>
+              )}
+              <button 
+                onClick={handleDeleteForMe} 
+                className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
+              >
+                Xóa phía tôi
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Tên người gửi (chỉ hiện với group chat, không phải mình) */}
@@ -832,6 +880,14 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                   activeConversation.type === 'direct' ? activeConversation.id : null,
                   emoji
                 );
+              }}
+              onDeleteForMe={async (messageId) => {
+                try {
+                  await messageApi.deleteForMe(messageId);
+                  useChatStore.getState().removeMessageForMe(activeConversation.type, activeConversation.id, messageId);
+                } catch (error) {
+                  useUIStore.getState().showAlert('Có lỗi xảy ra khi xóa tin nhắn', 'error');
+                }
               }}
               isFirstInGroup={isFirstInGroup}
               isLastInGroup={isLastInGroup}

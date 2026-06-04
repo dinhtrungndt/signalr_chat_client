@@ -10,6 +10,9 @@ const messageApi = {
   recallMessage: (messageId) =>
     axiosClient.put(`/messages/${messageId}/recall`),
     
+  deleteForMe: (messageId) =>
+    axiosClient.delete(`/messages/${messageId}/for-me`),
+    
   getMedia: (params) =>
     axiosClient.get('/messages/media', { params }),
     

@@ -92,6 +92,16 @@ const useChatStore = create((set, get) => ({
     });
   },
 
+  // Xóa một tin nhắn hoàn toàn khỏi state (dùng cho Xóa phía tôi)
+  removeMessageForMe: (type, id, messageId) => {
+    const key = `${type}_${id}`;
+    set((state) => {
+      const msgs = state.messages[key] || [];
+      const newMsgs = msgs.filter((m) => m.id !== messageId && m.id !== String(messageId));
+      return { messages: { ...state.messages, [key]: newMsgs } };
+    });
+  },
+
   // Cập nhật Cảm xúc (Reactions) của một tin nhắn
   updateMessageReactions: (type, id, messageId, action, reaction) => {
     const key = `${type}_${id}`;
