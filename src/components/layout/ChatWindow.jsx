@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import GroupMembersModal from './GroupMembersModal';
 import ReactionListModal from './ReactionListModal';
 import UserProfileModal from './UserProfileModal';
+import ImageViewerModal from './ImageViewerModal';
 import AudioRecorder from './AudioRecorder';
 import WaveformPlayer from '../common/WaveformPlayer';
 import messageApi from '../../api/message.api';
@@ -63,6 +64,16 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
       }
     };
   }, []);
+
+  useEffect(() => {
+    const handleTriggerDelete = (e) => {
+      if (e.detail.messageId === message.id) {
+        handleDeleteForMe();
+      }
+    };
+    window.addEventListener('trigger-delete-for-me', handleTriggerDelete);
+    return () => window.removeEventListener('trigger-delete-for-me', handleTriggerDelete);
+  }, [message.id]);
 
   const handleDeleteForMe = () => {
     setIsDeleting(true);
@@ -275,7 +286,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
                 src={`${process.env.REACT_APP_SOCKET_URL}${urls[0]}`} 
                 alt="Image" 
                 className="max-w-xs sm:max-w-sm rounded-xl object-contain cursor-pointer max-h-64"
-                onClick={() => onImageClick(`${process.env.REACT_APP_SOCKET_URL}${urls[0]}`)}
+                onClick={() => onImageClick({ url: `${process.env.REACT_APP_SOCKET_URL}${urls[0]}`, message, isOwn })}
               />
             );
           } else {
@@ -288,8 +299,8 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
                     key={idx}
                     src={`${process.env.REACT_APP_SOCKET_URL}${url}`}
                     alt="Image"
-                    className="w-full aspect-square object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => onImageClick(`${process.env.REACT_APP_SOCKET_URL}${url}`)}
+                    className="w-full h-24 sm:h-32 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                    onClick={() => onImageClick({ url: `${process.env.REACT_APP_SOCKET_URL}${url}`, message, isOwn })}
                   />
                 ))}
               </div>
@@ -1096,28 +1107,18 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
       {/* Render Modal Xem Ảnh Phóng To */}
       {previewImage && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity"
-          onClick={() => setPreviewImage(null)}
-        >
-          <div className="relative max-w-5xl max-h-screen w-full h-full flex items-center justify-center p-4 sm:p-8">
-            <button 
-              className="absolute top-4 right-4 sm:top-8 sm:right-8 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition backdrop-blur-md"
-              onClick={() => setPreviewImage(null)}
-              title="Đóng (Esc)"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <img 
-              src={previewImage} 
-              alt="Preview" 
-              className="max-w-full max-h-full object-contain drop-shadow-2xl rounded-sm"
-              onClick={(e) => e.stopPropagation()} 
-            />
-          </div>
-        </div>
+        <ImageViewerModal 
+          previewData={previewImage} 
+          onClose={() => setPreviewImage(null)} 
+          onGoToMessage={(messageId) => {
+            const el = document.getElementById(`msg-${messageId}`);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.classList.add('bg-indigo-100/50', 'transition-colors', 'duration-1000');
+              setTimeout(() => el.classList.remove('bg-indigo-100/50'), 2000);
+            }
+          }}
+        />
       )}
 
       {/* Render User Profile Modal */}
