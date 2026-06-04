@@ -23,6 +23,33 @@ const formatTime = (dateStr) => {
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
 
+const renderTextWithLinks = (text) => {
+  if (!text) return null;
+  // Regex để tìm các URL (bắt đầu bằng http, https, hoặc www.)
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+  const parts = text.split(urlRegex);
+  
+  return parts.map((part, i) => {
+    if (part.match(urlRegex)) {
+      const href = part.startsWith('http') ? part : `http://${part}`;
+      return (
+        <a 
+          key={i} 
+          href={href} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="underline hover:opacity-80 transition-opacity break-all font-medium"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part}
+        </a>
+      );
+    }
+    // Sử dụng dangerouslySetInnerHTML cho ngắt dòng nếu cần, hoặc đơn giản giữ nguyên
+    return <span key={i}>{part}</span>;
+  });
+};
+
 const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImageClick, onReact, onShowReactions, isFirstInGroup = true, isLastInGroup = true }) => {
   if (message.type === 'SYSTEM') {
     let content = message.content;
@@ -172,7 +199,7 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
           </div>
         )}
 
-        {message.type === 'TEXT' && message.content}
+        {message.type === 'TEXT' && renderTextWithLinks(message.content)}
         {message.type === 'RECALLED' && message.content}
         {message.type === 'IMAGE' && (() => {
           const urls = message.content.split('|');
@@ -567,6 +594,39 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
     }
   };
 
+  // Xử lý dán (paste) ảnh từ clipboard
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const files = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        files.push(items[i].getAsFile());
+      }
+    }
+
+    if (files.length > 0) {
+      // Ngăn hành vi dán mặc định nếu có ảnh (tránh việc chèn URL ảnh nếu có)
+      // Không preventDefault nếu người dùng dán text bình thường
+      e.preventDefault();
+      
+      const newPendingFiles = files.map(file => {
+        if (file.size > 20 * 1024 * 1024) {
+          alert(`File ảnh vượt quá 20MB!`);
+          return null;
+        }
+        return {
+          id: Math.random().toString(36).substr(2, 9),
+          file,
+          previewUrl: URL.createObjectURL(file)
+        };
+      }).filter(f => f !== null);
+
+      setPendingFiles(prev => [...prev, ...newPendingFiles]);
+    }
+  };
+
   if (!activeConversation) return null;
 
   return (
@@ -909,6 +969,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                 value={inputText}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
                 rows={1}
                 placeholder={`Nhắn tin ${activeConversation.type === 'group' ? 'nhóm' : activeConversation.name}...`}
                 className="w-full resize-none bg-transparent border-none focus:ring-0 px-4 py-3 min-h-[44px] max-h-32 text-sm leading-5 placeholder-slate-400"

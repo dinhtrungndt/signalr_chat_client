@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import useChatStore from '../../stores/chat.store';
-import useAuthStore from '../../stores/auth.store';
-import messageApi from '../../api/message.api';
-import socketService from '../../services/socket.service';
+import { useEffect, useState } from 'react';
 import groupApi from '../../api/group.api';
+import messageApi from '../../api/message.api';
+import useAuthStore from '../../stores/auth.store';
+import useChatStore from '../../stores/chat.store';
 import GroupMembersModal from './GroupMembersModal';
 const EMPTY_ARRAY = [];
 
@@ -14,10 +13,10 @@ const RightSidebar = ({ onClose, onImageClick }) => {
   const [activeTab, setActiveTab] = useState('info'); // info | search
   const [media, setMedia] = useState([]);
   const [files, setFiles] = useState([]);
-  
+
   const conversationKey = activeConversation ? `${activeConversation.type}_${activeConversation.id}` : null;
   const messages = useChatStore((s) => s.messages[conversationKey] || EMPTY_ARRAY);
-  
+
   // Search
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -40,7 +39,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
         if (activeConversation.type === 'group') params.groupId = activeConversation.id;
         else params.partnerId = activeConversation.id;
         const res = await messageApi.getMedia(params);
-        
+
         // Tách gộp mảng ảnh (vì có thể 1 tin nhắn có nhiều ảnh dạng url1|url2)
         let extractedUrls = [];
         res.data.data.forEach(msg => {
@@ -155,15 +154,15 @@ const RightSidebar = ({ onClose, onImageClick }) => {
             <img src={`${process.env.REACT_APP_SOCKET_URL}${activeConversation.avatar}`} alt="Avatar" className="w-20 h-20 rounded-full object-cover shadow-md mb-3" />
           ) : (
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-3xl font-bold shadow-md mb-3">
-              {activeConversation.type === 'group' 
+              {activeConversation.type === 'group'
                 ? activeConversation.name.charAt(0).toUpperCase()
                 : activeConversation.name.charAt(0).toUpperCase()}
             </div>
           )}
           <h3 className="text-lg font-bold text-slate-800">{activeConversation.name}</h3>
-          
+
           <div className="flex gap-4 mt-4">
-            <button 
+            <button
               onClick={() => setActiveTab('search')}
               className="flex flex-col items-center gap-1 group"
             >
@@ -174,7 +173,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
             </button>
 
             {activeConversation.type === 'group' && (
-              <button 
+              <button
                 onClick={() => setIsMembersModalOpen(true)}
                 className="flex flex-col items-center gap-1 group"
               >
@@ -196,7 +195,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
               <h3 className="font-semibold text-slate-800">Tìm kiếm tin nhắn</h3>
             </div>
             <div className="relative mb-4">
-              <input 
+              <input
                 type="text"
                 placeholder="Nhập từ khóa tìm kiếm..."
                 value={searchKeyword}
@@ -235,7 +234,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
           <div className="py-2">
             {/* Ảnh/Video */}
             <div className="border-b border-slate-200">
-              <button 
+              <button
                 className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-100 transition"
                 onClick={() => setIsMediaOpen(!isMediaOpen)}
               >
@@ -261,7 +260,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
 
             {/* File */}
             <div className="border-b border-slate-200">
-              <button 
+              <button
                 className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-100 transition"
                 onClick={() => setIsFileOpen(!isFileOpen)}
               >
@@ -292,7 +291,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
             {/* Quản lý/Bảo mật */}
             {activeConversation.type === 'group' && (
               <div>
-                <button 
+                <button
                   className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-100 transition"
                   onClick={() => setIsSettingOpen(!isSettingOpen)}
                 >
@@ -312,7 +311,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                             <div className={`bg-white w-3.5 h-3.5 rounded-full shadow-md transform transition-transform ${activeConversation.isReadOnly ? 'translate-x-5' : ''}`}></div>
                           </button>
                         </div>
-                        <button 
+                        <button
                           onClick={handleDisbandGroup}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 text-red-600 transition w-full"
                       >
@@ -321,7 +320,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                       </button>
                       </>
                     )}
-                    <button 
+                    <button
                       onClick={handleLeaveGroup}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 text-red-600 transition w-full"
                     >
