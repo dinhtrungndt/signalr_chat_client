@@ -4,10 +4,13 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useEffect } from 'react';
+import io from 'socket.io-client';
 import useAuthStore from '../stores/auth.store';
 import authApi from '../api/auth.api';
 
 import { Helmet } from 'react-helmet-async';
+
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:1411';
 
 const schema = z.object({
   username: z.string().min(1, 'Vui lòng nhập tên đăng nhập'),
@@ -34,12 +37,12 @@ const LoginPage = () => {
     }
   };
 
-  // QR Generate and Polling
+  // QR Generate and Listen (Real-time Socket.io)
   useEffect(() => {
-    let intervalId;
+    let socketRef = null;
     let isMounted = true;
 
-    const generateAndPoll = async () => {
+    const generateAndListen = async () => {
       if (loginMethod !== 'QR') {
         setQrSessionId(null);
         return;
@@ -49,32 +52,29 @@ const LoginPage = () => {
         const sessionId = genData.data.sessionId;
         if (isMounted) setQrSessionId(sessionId);
 
-        // Start polling
-        intervalId = setInterval(async () => {
-          try {
-            const { data: statusData } = await authApi.getQrStatus(sessionId);
-            const session = statusData.data;
-            if (session.status === 'AUTHORIZED' && session.tokenData) {
-              clearInterval(intervalId);
-              // Perform Login
-              qrLogin(session.tokenData);
-              navigate('/');
-            }
-          } catch (e) {
-            // Ignore 404 (expired) or network issues, it will just retry or generate a new one eventually
-            console.error('QR polling error', e);
-          }
-        }, 1500);
+        // Connect to unauthenticated QR namespace
+        socketRef = io(`${SOCKET_URL}/qr`, {
+          query: { sessionId },
+          transports: ['websocket'],
+        });
+
+        socketRef.on('qr_authorized', (tokenData) => {
+          qrLogin(tokenData);
+          navigate('/');
+        });
+
       } catch (err) {
         console.error('Failed to generate QR session', err);
       }
     };
 
-    generateAndPoll();
+    generateAndListen();
 
     return () => {
       isMounted = false;
-      if (intervalId) clearInterval(intervalId);
+      if (socketRef) {
+        socketRef.disconnect();
+      }
     };
   }, [loginMethod, qrLogin, navigate]);
 
