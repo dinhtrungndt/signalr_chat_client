@@ -9,6 +9,7 @@ const QrScanModal = ({ onClose, status, error, onScan }) => {
     let html5QrCode;
 
     const startScanner = async () => {
+      let isScanned = false;
       try {
         html5QrCode = new Html5Qrcode("qr-reader");
         await html5QrCode.start(
@@ -19,9 +20,9 @@ const QrScanModal = ({ onClose, status, error, onScan }) => {
             aspectRatio: 1.0
           },
           (decodedText) => {
-            html5QrCode.stop().then(() => {
-              onScan(decodedText);
-            }).catch(err => console.error(err));
+            if (isScanned) return;
+            isScanned = true;
+            onScan(decodedText);
           },
           (errorMessage) => {
             // Lỗi parse (bỏ qua)
