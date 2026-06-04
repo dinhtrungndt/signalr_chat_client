@@ -28,6 +28,9 @@ const messageApi = {
     
   unpinMessage: (messageId) => 
     axiosClient.delete(`/messages/pins/${messageId}`),
+    
+  clearConversation: (data) =>
+    axiosClient.delete('/messages/conversation/clear', { data }),
 };
 
 export default messageApi;

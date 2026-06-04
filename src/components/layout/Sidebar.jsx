@@ -30,7 +30,7 @@ const getSubtitle = (lastMessage, prefix) => {
   return prefix ? `${prefix}: ${text}` : text;
 };
 
-const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClick }) => {
+const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClearConversation, onClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -134,6 +134,21 @@ const ConversationItem = ({ item, isActive, isPinned, onTogglePin, onClick }) =>
                     </>
                   )}
                 </button>
+                {onClearConversation && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMenuOpen(false);
+                      onClearConversation();
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-2.5"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span className="font-medium">Xóa lịch sử hội thoại</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -156,6 +171,11 @@ const Sidebar = ({ onItemClick }) => {
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  
+  // Clear conversation state
+  const [clearState, setClearState] = useState(null);
+  const clearTimerRef = useRef(null);
+
   const debouncedSearch = useDebounce(searchQuery, 300);
   const { theme, setTheme } = useThemeStore();
 
@@ -211,23 +231,70 @@ const Sidebar = ({ onItemClick }) => {
     const pinned = [];
     const normal = [];
     recentChats.forEach(chat => {
+      if (clearState && clearState.type === 'direct' && clearState.id === chat.id) return;
       const isPinned = pinnedConversations.some(p => String(p.type).toUpperCase() === 'DIRECT' && Number(p.entityId) === Number(chat.id));
       if (isPinned) pinned.push({ ...chat, isPinned });
       else normal.push(chat);
     });
     return [...pinned, ...normal];
-  }, [recentChats, pinnedConversations]);
+  }, [recentChats, pinnedConversations, clearState]);
 
   const sortedGroups = useMemo(() => {
     const pinned = [];
     const normal = [];
     groups.forEach(group => {
+      if (clearState && clearState.type === 'group' && clearState.id === group.id) return;
       const isPinned = pinnedConversations.some(p => String(p.type).toUpperCase() === 'GROUP' && Number(p.entityId) === Number(group.id));
       if (isPinned) pinned.push({ ...group, isPinned });
       else normal.push(group);
     });
     return [...pinned, ...normal];
-  }, [groups, pinnedConversations]);
+  }, [groups, pinnedConversations, clearState]);
+
+  const handleClearConversation = (type, id) => {
+    setClearState({ type, id, countdown: 5 });
+    if (clearTimerRef.current) clearInterval(clearTimerRef.current);
+    
+    let countdown = 5;
+    clearTimerRef.current = setInterval(() => {
+      countdown -= 1;
+      
+      if (countdown <= 0) {
+        clearInterval(clearTimerRef.current);
+        
+        // Thực hiện xóa thực sự trên Backend
+        const payload = type === 'group' ? { groupId: id } : { partnerId: id };
+        messageApi.clearConversation(payload)
+          .then(() => {
+            useUIStore.getState().showToast('Đã xóa lịch sử hội thoại', 'success');
+            
+            // Yêu cầu React Query tải lại danh sách chat mới nhất từ Server
+            queryClient.invalidateQueries({ queryKey: ['recent-chats'] });
+            queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+
+            // Clear current active if match
+            const currentActive = useChatStore.getState().activeConversation;
+            if (currentActive && currentActive.type === type && currentActive.id === id) {
+              useChatStore.getState().initMessages(type, id, []);
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            useUIStore.getState().showAlert('Có lỗi khi xóa lịch sử', 'error');
+          })
+          .finally(() => {
+            setClearState(null);
+          });
+      } else {
+        setClearState({ type, id, countdown });
+      }
+    }, 1000);
+  };
+
+  const handleUndoClear = () => {
+    if (clearTimerRef.current) clearInterval(clearTimerRef.current);
+    setClearState(null);
+  };
 
   useEffect(() => {
     // Ép buộc React Query phải gọi lại API ngay cả khi trình duyệt không được focus
@@ -576,6 +643,7 @@ const Sidebar = ({ onItemClick }) => {
                             isActive={activeConversation?.type === 'direct' && activeConversation?.id === chat.id}
                             isPinned={chat.isPinned}
                             onTogglePin={() => handleTogglePin('direct', chat.id)}
+                            onClearConversation={() => handleClearConversation('direct', chat.id)}
                             onClick={() => handleSelectConversation('direct', chat.id, chat.fullName, chat.avatar)}
                           />
                         );
@@ -620,6 +688,7 @@ const Sidebar = ({ onItemClick }) => {
                             isActive={activeConversation?.type === 'group' && activeConversation?.id === group.id}
                             isPinned={group.isPinned}
                             onTogglePin={() => handleTogglePin('group', group.id)}
+                            onClearConversation={() => handleClearConversation('group', group.id)}
                             onClick={() => handleSelectConversation('group', group.id, group.name, group.avatar, group.role, group.isReadOnly, group.memberCount)}
                           />
                         );
@@ -648,6 +717,20 @@ const Sidebar = ({ onItemClick }) => {
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
       />
+
+      {/* Undo Clear Conversation Banner */}
+      {clearState && (
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[100] animate-fade-in-up w-11/12 max-w-sm">
+          <div className="bg-slate-800 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-between gap-3 border border-slate-700">
+            <span className="text-[13px]">
+              Đang xóa hội thoại sau <span className="font-bold text-red-400">{clearState.countdown}s</span>...
+            </span>
+            <button onClick={handleUndoClear} className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition uppercase tracking-wider bg-white/10 px-3 py-1.5 rounded-lg hover:bg-white/20">
+              Hoàn tác
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
