@@ -3,6 +3,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppRouter from './routers/AppRouter';
 import useThemeStore from './stores/theme.store';
+import GlobalUI from './components/common/GlobalUI';
 
 // Cấu hình React Query: cache dữ liệu thông minh
 export const queryClient = new QueryClient({
@@ -26,6 +27,7 @@ function App() {
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
+        <GlobalUI />
         <AppRouter />
       </QueryClientProvider>
     </HelmetProvider>

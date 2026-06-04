@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useUIStore } from '../../stores/ui.store';
 
 const formatTime = (seconds) => {
   const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -49,7 +50,7 @@ const AudioRecorder = ({ onSend, onCancel }) => {
 
     } catch (err) {
       console.error('Không thể truy cập Microphone:', err);
-      alert('Vui lòng cấp quyền truy cập Microphone để gửi tin nhắn giọng nói!');
+      useUIStore.getState().showAlert('Vui lòng cấp quyền truy cập Microphone để gửi tin nhắn giọng nói!', 'error');
       onCancel();
     }
   };

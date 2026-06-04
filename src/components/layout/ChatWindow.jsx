@@ -12,6 +12,7 @@ import uploadApi from '../../api/upload.api';
 import socketService from '../../services/socket.service';
 import useAuthStore from '../../stores/auth.store';
 import useChatStore from '../../stores/chat.store';
+import { useUIStore } from '../../stores/ui.store';
 
 const formatTime = (dateStr) => {
   try {
@@ -119,8 +120,8 @@ const MessageItem = ({ message, isOwn, readers, isAdmin, onReply, onPin, onImage
         {/* Nút Thu Hồi (chỉ cho tin nhắn của mình) */}
         {isOwn && message.type !== 'RECALLED' && (
           <button
-            onClick={() => {
-              if (window.confirm('Bạn có chắc chắn muốn thu hồi tin nhắn này?')) {
+            onClick={async () => {
+              if (await useUIStore.getState().confirm('Thu hồi tin nhắn', 'Bạn có chắc chắn muốn thu hồi tin nhắn này?')) {
                 messageApi.recallMessage(message.id).catch(console.error);
               }
             }}
@@ -367,20 +368,20 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       await messageApi.pinMessage(message.id, data);
     } catch (err) {
       if (err.response?.data?.message) {
-        alert(err.response.data.message);
+        useUIStore.getState().showAlert(err.response.data.message, 'error');
       } else {
-        alert('Có lỗi xảy ra khi ghim tin nhắn.');
+        useUIStore.getState().showAlert('Có lỗi xảy ra khi ghim tin nhắn.', 'error');
       }
     }
   };
 
   const handleUnpinMessage = async (messageId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn bỏ ghim tin nhắn này?')) return;
+    if (!(await useUIStore.getState().confirm('Bỏ ghim', 'Bạn có chắc chắn muốn bỏ ghim tin nhắn này?'))) return;
     try {
       await messageApi.unpinMessage(messageId);
     } catch (err) {
       console.error(err);
-      alert('Không thể bỏ ghim tin nhắn.');
+      useUIStore.getState().showAlert('Không thể bỏ ghim tin nhắn.', 'error');
     }
   };
 
@@ -502,8 +503,8 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       setPendingFiles([]);
       setReplyingTo(null);
     } catch (err) {
-      console.error('Gửi tin nhắn/file thất bại:', err);
-      alert('Gửi tin nhắn hoặc file thất bại. Vui lòng thử lại!');
+      console.error(err);
+      useUIStore.getState().showAlert('Gửi tin nhắn hoặc file thất bại. Vui lòng thử lại!', 'error');
     } finally {
       setIsSending(false);
     }
@@ -532,7 +533,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       }
     } catch (error) {
       console.error('Lỗi khi tải lên file thu âm:', error);
-      alert('Gửi tin nhắn giọng nói thất bại. Vui lòng thử lại.');
+      useUIStore.getState().showAlert('Gửi tin nhắn giọng nói thất bại. Vui lòng thử lại.', 'error');
     }
   };
 
@@ -543,7 +544,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
     const newPendingFiles = files.map(file => {
       if (file.size > 20 * 1024 * 1024) {
-        alert(`File ${file.name} vượt quá 20MB!`);
+        useUIStore.getState().showAlert(`File ${file.name} vượt quá 20MB!`, 'warning');
         return null;
       }
       return {
@@ -613,7 +614,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       
       const newPendingFiles = files.map(file => {
         if (file.size > 20 * 1024 * 1024) {
-          alert(`File ảnh vượt quá 20MB!`);
+          useUIStore.getState().showAlert(`File ảnh vượt quá 20MB!`, 'warning');
           return null;
         }
         return {

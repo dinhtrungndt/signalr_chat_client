@@ -7,6 +7,7 @@ import userApi from '../../api/user.api';
 import useDebounce from '../../hooks/useDebounce';
 import useAuthStore from '../../stores/auth.store';
 import useChatStore from '../../stores/chat.store';
+import { useUIStore } from '../../stores/ui.store';
 import CreateGroupModal from './CreateGroupModal';
 import ProfileModal from './ProfileModal';
 import useThemeStore from '../../stores/theme.store';
@@ -200,7 +201,7 @@ const Sidebar = ({ onItemClick }) => {
       }
       queryClient.invalidateQueries(['pinned-conversations']);
     } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra');
+      useUIStore.getState().showAlert(err.response?.data?.message || 'Có lỗi xảy ra', 'error');
     }
   };
 

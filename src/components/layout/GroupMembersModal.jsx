@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import groupApi from '../../api/group.api';
 import userApi from '../../api/user.api';
-import useChatStore from '../../stores/chat.store';
 import useAuthStore from '../../stores/auth.store';
+import { useUIStore } from '../../stores/ui.store';
+import useChatStore from '../../stores/chat.store';
 
 const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
   const queryClient = useQueryClient();
@@ -192,8 +193,8 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
                       <div className="flex items-center gap-2 shrink-0">
                         {m.role === 'DEPUTY' ? (
                           <button
-                            onClick={() => {
-                              if(window.confirm(`Giáng chức ${m.user.fullName} xuống thành viên?`)) {
+                            onClick={async () => {
+                              if (await useUIStore.getState().confirm('Giáng chức', `Giáng chức ${m.user.fullName} xuống thành viên?`, 'Đồng ý')) {
                                 changeRoleMutation.mutate({ userId: m.userId, role: 'MEMBER' });
                               }
                             }}
@@ -204,8 +205,8 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
                           </button>
                         ) : (
                           <button
-                            onClick={() => {
-                              if(window.confirm(`Thăng cấp ${m.user.fullName} làm phó nhóm?`)) {
+                            onClick={async () => {
+                              if (await useUIStore.getState().confirm('Thăng cấp', `Thăng cấp ${m.user.fullName} làm phó nhóm?`, 'Đồng ý')) {
                                 changeRoleMutation.mutate({ userId: m.userId, role: 'DEPUTY' });
                               }
                             }}
@@ -216,8 +217,8 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
                           </button>
                         )}
                         <button
-                          onClick={() => {
-                            if(window.confirm(`Xóa ${m.user.fullName} khỏi nhóm?`)) {
+                          onClick={async () => {
+                            if (await useUIStore.getState().confirm('Xóa thành viên', `Xóa ${m.user.fullName} khỏi nhóm?`, 'Xóa')) {
                               removeMutation.mutate({ userId: m.userId, silent: false });
                             }
                           }}
@@ -294,8 +295,8 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
         <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex gap-3">
           {isAdmin && (
             <button
-              onClick={() => {
-                if (window.confirm('CẢNH BÁO: Hành động này sẽ xoá toàn bộ tin nhắn và giải tán nhóm vĩnh viễn. Bạn có chắc chắn?')) {
+              onClick={async () => {
+                if (await useUIStore.getState().confirm('CẢNH BÁO', 'Hành động này sẽ xoá toàn bộ tin nhắn và giải tán nhóm vĩnh viễn. Bạn có chắc chắn?', 'Giải tán nhóm')) {
                   deleteGroupMutation.mutate();
                 }
               }}

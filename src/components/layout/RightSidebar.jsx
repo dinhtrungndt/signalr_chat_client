@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import groupApi from '../../api/group.api';
 import messageApi from '../../api/message.api';
 import useAuthStore from '../../stores/auth.store';
+import { useUIStore } from '../../stores/ui.store';
 import useChatStore from '../../stores/chat.store';
 import GroupMembersModal from './GroupMembersModal';
 const EMPTY_ARRAY = [];
@@ -98,7 +99,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
   }, [searchKeyword, activeConversation]);
 
   const handleDisbandGroup = async () => {
-    if (window.confirm('Bạn có chắc chắn muốn giải tán nhóm này không? Mọi dữ liệu sẽ bị xóa!')) {
+    if (await useUIStore.getState().confirm('CẢNH BÁO', 'Bạn có chắc chắn muốn giải tán nhóm này không? Mọi dữ liệu sẽ bị xóa!', 'Xóa nhóm')) {
       try {
         await groupApi.deleteGroup(activeConversation.id);
         useChatStore.getState().setActiveConversation(null);
@@ -109,7 +110,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
   };
 
   const handleLeaveGroup = async () => {
-    if (window.confirm('Bạn có chắc chắn muốn rời nhóm này không?')) {
+    if (await useUIStore.getState().confirm('Rời nhóm', 'Bạn có chắc chắn muốn rời nhóm này không?', 'Rời khỏi')) {
       try {
         await groupApi.removeUser(activeConversation.id, currentUser.id);
         useChatStore.getState().setActiveConversation(null);

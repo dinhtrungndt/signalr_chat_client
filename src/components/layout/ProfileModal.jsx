@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import userApi from '../../api/user.api';
 import uploadApi from '../../api/upload.api';
 import useAuthStore from '../../stores/auth.store';
+import { useUIStore } from '../../stores/ui.store';
 
 const ProfileModal = ({ isOpen, onClose }) => {
   const user = useAuthStore((s) => s.user);
@@ -76,7 +77,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
       
       // 3. Cập nhật Store
       updateUser(response.data.data);
-      alert('Cập nhật thông tin thành công!');
+      useUIStore.getState().showToast('Cập nhật thông tin thành công!', 'success');
       onClose();
     } catch (err) {
       console.error(err);
