@@ -11,6 +11,7 @@ import { useUIStore } from '../../stores/ui.store';
 import CreateGroupModal from './CreateGroupModal';
 import ProfileModal from './ProfileModal';
 import useThemeStore from '../../stores/theme.store';
+import messageApi from '../../api/message.api';
 
 const formatTime = (dateStr) => {
   try {
@@ -150,6 +151,7 @@ const Sidebar = ({ onItemClick }) => {
   const onlineUsers = useChatStore((s) => s.onlineUsers);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchTab, setSearchTab] = useState('all'); // all, contacts, messages
   const [activeTab, setActiveTab] = useState('direct'); // 'direct' hoặc 'group'
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -260,13 +262,23 @@ const Sidebar = ({ onItemClick }) => {
     }
   }, [activeConversation, activeTab, recentChats, groups, isLoadingGroups, setActiveConversation]);
 
-  // Gọi API Tìm kiếm (khi gõ phím)
-  const { data: searchResultsData, isFetching: isSearching } = useQuery({
+  // Gọi API Tìm kiếm người dùng
+  const { data: searchContactsData, isFetching: isSearchingContacts } = useQuery({
     queryKey: ['search-users', debouncedSearch],
     queryFn: () => userApi.searchUsers(debouncedSearch).then((r) => r.data.data),
-    enabled: debouncedSearch.trim().length > 0,
+    enabled: debouncedSearch.trim().length > 0 && (searchTab === 'all' || searchTab === 'contacts'),
   });
-  const searchResults = searchResultsData || [];
+  const searchContacts = searchContactsData || [];
+
+  // Gọi API Tìm kiếm tin nhắn
+  const { data: searchMessagesData, isFetching: isSearchingMessages } = useQuery({
+    queryKey: ['search-messages-global', debouncedSearch],
+    queryFn: () => messageApi.searchMessages({ keyword: debouncedSearch }).then((r) => r.data.data),
+    enabled: debouncedSearch.trim().length > 0 && (searchTab === 'all' || searchTab === 'messages'),
+  });
+  const searchMessageResults = searchMessagesData || [];
+
+  const isSearching = isSearchingContacts || isSearchingMessages;
 
   const handleSelectConversation = (type, id, name, avatar = null, role = null, isReadOnly = false, memberCount = 0) => {
     setActiveConversation({ type, id, name, avatar, role, isReadOnly, memberCount });
@@ -383,33 +395,134 @@ const Sidebar = ({ onItemClick }) => {
       </div>
 
       {/* Danh sách Chat */}
-      <div className="flex-1 overflow-y-auto px-3 py-3">
+      <div className="flex-1 overflow-y-auto px-3 py-3 custom-scrollbar">
         {searchQuery.trim().length > 0 ? (
-          // Hiển thị kết quả tìm kiếm
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1 mb-2">
-              Kết quả tìm kiếm
-            </p>
+          // Hiển thị kết quả tìm kiếm với Tabs
+          <div className="flex flex-col h-full">
+            <div className="flex bg-slate-100 dark:bg-slate-800/80 rounded-lg p-1 mb-3 flex-shrink-0">
+              <button
+                onClick={() => setSearchTab('all')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  searchTab === 'all' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                Tất cả
+              </button>
+              <button
+                onClick={() => setSearchTab('contacts')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  searchTab === 'contacts' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                Liên hệ
+              </button>
+              <button
+                onClick={() => setSearchTab('messages')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  searchTab === 'messages' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                Tin nhắn
+              </button>
+            </div>
+
             {isSearching ? (
               <div className="text-center py-4 text-sm text-slate-500">Đang tìm...</div>
-            ) : searchResults.length === 0 ? (
-              <div className="text-center py-4 text-sm text-slate-500">Không tìm thấy ai</div>
             ) : (
-              <div className="space-y-1">
-                {searchResults.map((u) => (
-                  <ConversationItem
-                    key={`search_${u.id}`}
-                    item={{
-                        id: u.id,
-                        name: u.fullName,
-                        subtitle: u.username,
-                        avatar: u.avatar,
-                        isOnline: onlineUsers[u.id]
-                    }}
-                    isActive={false}
-                    onClick={() => handleSelectConversation('direct', u.id, u.fullName, u.avatar)}
-                  />
-                ))}
+              <div className="space-y-4 pb-4">
+                {/* Liên Hệ */}
+                {(searchTab === 'all' || searchTab === 'contacts') && (
+                  <div>
+                    {(searchTab === 'all' && searchContacts.length > 0) && (
+                      <div className="flex items-center justify-between px-1 mb-2 mt-1">
+                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Người liên hệ</span>
+                        {searchContacts.length > 3 && (
+                          <button onClick={() => setSearchTab('contacts')} className="text-xs text-indigo-500 hover:underline">Xem thêm</button>
+                        )}
+                      </div>
+                    )}
+                    {searchTab === 'contacts' && searchContacts.length === 0 && (
+                      <div className="text-center py-4 text-sm text-slate-500">Không tìm thấy liên hệ</div>
+                    )}
+                    <div className="space-y-1">
+                      {(searchTab === 'all' ? searchContacts.slice(0, 3) : searchContacts).map((u) => (
+                        <ConversationItem
+                          key={`search_user_${u.id}`}
+                          item={{
+                              id: u.id,
+                              name: u.fullName,
+                              subtitle: u.username,
+                              avatar: u.avatar,
+                              isOnline: onlineUsers[u.id]
+                          }}
+                          isActive={false}
+                          onClick={() => handleSelectConversation('direct', u.id, u.fullName, u.avatar)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tin Nhắn */}
+                {(searchTab === 'all' || searchTab === 'messages') && (
+                  <div>
+                    {(searchTab === 'all' && searchMessageResults.length > 0) && (
+                      <div className="flex items-center justify-between px-1 mb-2 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tin nhắn</span>
+                        {searchMessageResults.length > 3 && (
+                          <button onClick={() => setSearchTab('messages')} className="text-xs text-indigo-500 hover:underline">Xem thêm</button>
+                        )}
+                      </div>
+                    )}
+                    {searchTab === 'messages' && searchMessageResults.length === 0 && (
+                      <div className="text-center py-4 text-sm text-slate-500">Không tìm thấy tin nhắn</div>
+                    )}
+                    <div className="space-y-2 px-1">
+                      {(searchTab === 'all' ? searchMessageResults.slice(0, 3) : searchMessageResults).map((msg) => {
+                        const isGroup = msg.groupId != null;
+                        const partnerName = isGroup ? msg.group?.name : (msg.senderId === user?.id ? msg.receiver?.fullName : msg.sender?.fullName);
+                        const partnerAvatar = isGroup ? msg.group?.avatar : (msg.senderId === user?.id ? msg.receiver?.avatar : msg.sender?.avatar);
+                        
+                        return (
+                          <div 
+                            key={`search_msg_${msg.id}`} 
+                            className="p-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition" 
+                            onClick={() => {
+                              handleSelectConversation(isGroup ? 'group' : 'direct', isGroup ? msg.groupId : (msg.senderId === user?.id ? msg.receiver?.id : msg.sender?.id), partnerName, partnerAvatar);
+                              // Timeout needed because ChatWindow might not be rendered yet with the new conversation
+                              setTimeout(() => {
+                                const el = document.getElementById(`msg-${msg.id}`);
+                                if (el) {
+                                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  el.classList.add('bg-indigo-100', 'dark:bg-indigo-900', 'transition-colors', 'duration-1000');
+                                  setTimeout(() => el.classList.remove('bg-indigo-100', 'dark:bg-indigo-900'), 1500);
+                                }
+                              }, 1000);
+                            }}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold overflow-hidden">
+                                  {partnerAvatar ? <img src={`${process.env.REACT_APP_SOCKET_URL}${partnerAvatar}`} alt="" /> : partnerName?.charAt(0)}
+                                </div>
+                                <span className="font-semibold text-xs text-slate-800 dark:text-slate-200 truncate max-w-[120px]">{partnerName}</span>
+                              </div>
+                              <span className="text-[10px] text-slate-400">{formatTime(msg.createdAt)}</span>
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">
+                              <span className="font-medium text-slate-700 dark:text-slate-300">{msg.sender?.fullName}: </span>
+                              {msg.type === 'TEXT' ? msg.content : (msg.type === 'IMAGE' ? '[Hình ảnh]' : '[Tập tin]')}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {searchTab === 'all' && searchContacts.length === 0 && searchMessageResults.length === 0 && (
+                   <div className="text-center py-4 text-sm text-slate-500">Không tìm thấy kết quả phù hợp</div>
+                )}
               </div>
             )}
           </div>
