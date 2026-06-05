@@ -216,7 +216,7 @@ const Sidebar = ({ onItemClick }) => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTab, setSearchTab] = useState('all'); // all, contacts, messages
-  const [activeTab, setActiveTab] = useState('direct'); // 'direct' hoặc 'group'
+  const [activeTab, setActiveTab] = useState('group'); // 'direct' hoặc 'group'
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -709,20 +709,20 @@ const Sidebar = ({ onItemClick }) => {
             {/* Tabs Selector */}
             <div className="flex bg-slate-100 dark:bg-slate-800/80 rounded-lg p-1 mb-4 flex-shrink-0">
               <button
-                onClick={() => setActiveTab('direct')}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                  activeTab === 'direct' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
-              >
-                Trực tiếp
-              </button>
-              <button
                 onClick={() => setActiveTab('group')}
                 className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
                   activeTab === 'group' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
                 Nhóm
+              </button>
+              <button
+                onClick={() => setActiveTab('direct')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  activeTab === 'direct' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                Liên hệ
               </button>
             </div>
 
@@ -767,17 +767,7 @@ const Sidebar = ({ onItemClick }) => {
 
               {activeTab === 'group' && (
                 <div className="flex flex-col h-full">
-                  <div className="mb-3 px-1">
-                    <button
-                      onClick={() => setIsCreateGroupModalOpen(true)}
-                      className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 border border-indigo-100"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                      </svg>
-                      Tạo nhóm mới
-                    </button>
-                  </div>
+
                   {isLoadingGroups ? (
                     <div className="text-center py-4 text-sm text-slate-500">Đang tải...</div>
                   ) : groups.length === 0 ? (

@@ -1,9 +1,10 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import useChatStore from '../../stores/chat.store';
 import noteApi from '../../api/note.api';
 
 const ChatNoteWidget = ({ noteId }) => {
+  const queryClient = useQueryClient();
   const activeConversation = useChatStore(state => state.activeConversation);
 
   const { data, isLoading } = useQuery({
@@ -18,6 +19,18 @@ const ChatNoteWidget = ({ noteId }) => {
 
   const notes = data?.data?.data || [];
   const note = notes.find(n => n.id === parseInt(noteId));
+
+  React.useEffect(() => {
+    const handleUpdate = () => queryClient.invalidateQueries({ queryKey: ['notes'] });
+    window.addEventListener('note_created', handleUpdate);
+    window.addEventListener('note_updated', handleUpdate);
+    window.addEventListener('note_deleted', handleUpdate);
+    return () => {
+      window.removeEventListener('note_created', handleUpdate);
+      window.removeEventListener('note_updated', handleUpdate);
+      window.removeEventListener('note_deleted', handleUpdate);
+    };
+  }, [queryClient]);
 
   if (isLoading) {
     return (

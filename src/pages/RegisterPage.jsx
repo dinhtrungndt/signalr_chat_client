@@ -90,6 +90,15 @@ const RegisterPage = () => {
           {errors.phone && <p className="text-red-600 text-xs mt-1.5">{errors.phone.message}</p>}
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            Mã đơn vị
+            <span className="ml-1.5 text-xs text-slate-400 font-normal">(Bắt buộc — dùng để tham gia nhóm chat đơn vị)</span>
+          </label>
+          <input {...register('unitCode')} className="input-field" placeholder="VD: DV001, PHONG_KT..." autoComplete="off" />
+          {errors.unitCode && <p className="text-red-600 text-xs mt-1.5">{errors.unitCode.message}</p>}
+        </div>
+
         {serverError && <div className="alert-error">{serverError}</div>}
 
         <button type="submit" disabled={isSubmitting} className="btn-primary">

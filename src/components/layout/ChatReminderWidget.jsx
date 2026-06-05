@@ -23,6 +23,18 @@ const ChatReminderWidget = ({ reminderId }) => {
   const reminders = data?.data?.data || [];
   const reminder = reminders.find(r => r.id === parseInt(reminderId));
 
+  React.useEffect(() => {
+    const handleUpdate = () => queryClient.invalidateQueries({ queryKey: ['reminders'] });
+    window.addEventListener('reminder_created', handleUpdate);
+    window.addEventListener('reminder_updated', handleUpdate);
+    window.addEventListener('reminder_deleted', handleUpdate);
+    return () => {
+      window.removeEventListener('reminder_created', handleUpdate);
+      window.removeEventListener('reminder_updated', handleUpdate);
+      window.removeEventListener('reminder_deleted', handleUpdate);
+    };
+  }, [queryClient]);
+
   if (isLoading) {
     return (
       <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-xl border border-orange-200 dark:border-orange-700/50 shadow-sm w-[280px] max-w-full">

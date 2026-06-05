@@ -20,6 +20,18 @@ const ChatPollWidget = ({ pollId }) => {
   const polls = data?.data?.data || [];
   const poll = polls.find(p => p.id === parseInt(pollId));
 
+  // Lắng nghe sự kiện realtime từ socket
+  React.useEffect(() => {
+    const handlePollUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ['polls'] });
+    };
+
+    window.addEventListener('poll_updated', handlePollUpdate);
+    return () => {
+      window.removeEventListener('poll_updated', handlePollUpdate);
+    };
+  }, [queryClient]);
+
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm w-[280px] max-w-full">

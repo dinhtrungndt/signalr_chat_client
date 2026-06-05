@@ -14,6 +14,7 @@ const groupApi = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   changeRole: (groupId, targetUserId, role) => axiosClient.put(`/groups/${groupId}/users/${targetUserId}/role`, { role }),
+  getMyUnitGroup: () => axiosClient.get('/groups/my-unit'), // Lấy nhóm đơn vị của user hiện tại
 };
 
 export default groupApi;

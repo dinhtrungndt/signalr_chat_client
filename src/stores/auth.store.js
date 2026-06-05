@@ -36,12 +36,22 @@ const useAuthStore = create((set) => ({
 
   login: async (credentials) => {
     const { data } = await authApi.login(credentials);
-    const { user, accessToken, refreshToken } = data.data;
+    const { user, accessToken, refreshToken, unitGroup } = data.data;
 
     tokenStorage.set(accessToken);
     saveRefreshToken(refreshToken);
 
     set({ user, isAuthenticated: true });
+
+    // Tự động mở nhóm đơn vị ngay sau khi đăng nhập
+    if (unitGroup) {
+      import('./chat.store').then((module) => {
+        module.default.getState().setActiveConversation({
+          ...unitGroup,
+          type: 'group',
+        });
+      });
+    }
 
     // Đăng ký nhận thông báo nền (Web Push) sau khi đăng nhập thành công
     setTimeout(() => registerPushSubscription(), 1000);
@@ -89,7 +99,23 @@ const useAuthStore = create((set) => ({
       if (newRefresh) saveRefreshToken(newRefresh);
 
       const { data: meData } = await authApi.getMe();
-      set({ user: meData.data, isAuthenticated: true, isLoading: false });
+      const user = meData.data;
+      set({ user, isAuthenticated: true, isLoading: false });
+
+      // Tự động mở nhóm đơn vị khi load lại trang
+      try {
+        const groupApiModule = await import('../api/group.api');
+        const { data: groupData } = await groupApiModule.default.getMyUnitGroup();
+        if (groupData?.data) {
+          const chatStoreModule = await import('./chat.store');
+          chatStoreModule.default.getState().setActiveConversation({
+            ...groupData.data,
+            type: 'group',
+          });
+        }
+      } catch (_) {
+        // Không có nhóm đơn vị thì thôi, không ảnh hưởng
+      }
 
       // Đảm bảo đã subscribe web push (trường hợp load lại trang)
       setTimeout(() => registerPushSubscription(), 2000);
