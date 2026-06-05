@@ -60,6 +60,12 @@ const ChatPage = () => {
     return () => socketService.disconnect();
   }, []);
 
+  useEffect(() => {
+    const handleForceOpen = () => setRightSidebarOpen(true);
+    window.addEventListener('force-open-right-sidebar', handleForceOpen);
+    return () => window.removeEventListener('force-open-right-sidebar', handleForceOpen);
+  }, []);
+
   return (
     <div 
       className="h-screen overflow-hidden"

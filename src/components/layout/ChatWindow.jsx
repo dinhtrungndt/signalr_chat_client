@@ -1,23 +1,23 @@
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import React, { useState, useEffect, useRef } from 'react';
-import GroupMembersModal from './GroupMembersModal';
-import ReactionListModal from './ReactionListModal';
-import UserProfileModal from './UserProfileModal';
-import ImageViewerModal from './ImageViewerModal';
-import ShareMessageModal from './ShareMessageModal';
-import MessageReadersModal from './MessageReadersModal';
-import AudioRecorder from './AudioRecorder';
-import WaveformPlayer from '../common/WaveformPlayer';
+import EmojiPicker from 'emoji-picker-react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import messageApi from '../../api/message.api';
 import uploadApi from '../../api/upload.api';
 import socketService from '../../services/socket.service';
 import useAuthStore from '../../stores/auth.store';
 import useChatStore from '../../stores/chat.store';
-import { useUIStore } from '../../stores/ui.store';
-import EmojiPicker from 'emoji-picker-react';
 import useThemeStore from '../../stores/theme.store'; // For emoji-picker-react theme
+import { useUIStore } from '../../stores/ui.store';
+import WaveformPlayer from '../common/WaveformPlayer';
+import AudioRecorder from './AudioRecorder';
+import GroupMembersModal from './GroupMembersModal';
+import ImageViewerModal from './ImageViewerModal';
+import MessageReadersModal from './MessageReadersModal';
+import ReactionListModal from './ReactionListModal';
+import ShareMessageModal from './ShareMessageModal';
+import UserProfileModal from './UserProfileModal';
 
 const STICKER_CATEGORIES = [
   { label: 'Gần đây', query: '' },
@@ -43,17 +43,17 @@ const renderTextWithLinks = (text) => {
   // Regex để tìm các URL (bắt đầu bằng http, https, hoặc www.)
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
   const parts = text.split(urlRegex);
-  
+
   return parts.map((part, i) => {
     if (part.match(urlRegex)) {
       const href = part.startsWith('http') ? part : `http://${part}`;
       // Cắt ngắn link nếu quá dài để giao diện gọn gàng hơn
       const displayPart = part.length > 40 ? part.substring(0, 37) + '...' : part;
       return (
-        <a 
-          key={i} 
-          href={href} 
-          target="_blank" 
+        <a
+          key={i}
+          href={href}
+          target="_blank"
           rel="noopener noreferrer"
           className="underline hover:opacity-80 transition-opacity break-all font-medium"
           onClick={(e) => e.stopPropagation()}
@@ -68,9 +68,9 @@ const renderTextWithLinks = (text) => {
   });
 };
 
-const MessageItem = ({ 
-  message, isOwn, readers, isAdmin, 
-  onReply, onPin, onShare, onEdit, onImageClick, onReact, onShowReactions, onShowReaders, onDeleteForMe, 
+const MessageItem = ({
+  message, isOwn, readers, isAdmin,
+  onReply, onPin, onShare, onEdit, onImageClick, onReact, onShowReactions, onShowReaders, onDeleteForMe,
   isFirstInGroup = true, isLastInGroup = true,
   isSelectionMode = false, isSelected = false, onToggleSelect = null, onEnableSelectionMode = null, isDraggingSelection = false
 }) => {
@@ -127,12 +127,18 @@ const MessageItem = ({
   const handleDeleteForMe = () => {
     setIsDeleting(true);
     setCountdown(5);
-    
+
     countdownIntervalRef.current = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(countdownIntervalRef.current);
-          onDeleteForMe(message.id);
+          
+          // Gọi callback và xử lý lỗi nếu có
+          Promise.resolve(onDeleteForMe(message.id)).catch(() => {
+            setIsDeleting(false);
+            setCountdown(5);
+          });
+          
           return 0;
         }
         return prev - 1;
@@ -163,7 +169,7 @@ const MessageItem = ({
   if (message.type === 'SYSTEM') {
     let content = message.content;
     let isSilent = false;
-    
+
     if (content.startsWith('[SILENT_LEAVE]')) {
       isSilent = true;
       content = content.replace('[SILENT_LEAVE]', '');
@@ -180,7 +186,7 @@ const MessageItem = ({
   }
 
   return (
-    <div 
+    <div
       className={`relative flex items-end group/select ${isSelectionMode ? 'cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/30 rounded-xl px-1 sm:px-2 py-0.5' : ''}`}
       onClick={(e) => {
         if (isSelectionMode && onToggleSelect) {
@@ -216,10 +222,10 @@ const MessageItem = ({
                 {message.sender?.fullName?.charAt(0) || '?'}
               </div>
             )}
-            
+
             {/* Biểu tượng Chìa Khóa cho Admin / Phó nhóm */}
             {(message.senderRole === 'ADMIN' || message.senderRole === 'DEPUTY') && (
-              <div 
+              <div
                 className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 ${message.senderRole === 'ADMIN' ? 'bg-amber-400 text-white' : 'bg-slate-400 text-white'}`}
                 title={message.senderRole === 'ADMIN' ? 'Trưởng nhóm' : 'Phó nhóm'}
               >
@@ -236,7 +242,7 @@ const MessageItem = ({
 
     <div className="max-w-[78%] sm:max-w-[70%] group relative" id={`msg-${message.id}`}>
       {/* Nút Hành Động (hiển thị khi hover) */}
-      <div className={`absolute top-1/2 -translate-y-1/2 ${isOwn ? 'right-full mr-2 flex-row' : 'left-full ml-2 flex-row-reverse'} opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 z-20`}>
+      <div className={`absolute top-1/2 -translate-y-1/2 ${isOwn ? 'right-full mr-2 flex-row' : 'left-full ml-2 flex-row-reverse'} ${isMenuOpen || isReactOpen ? 'opacity-100 z-[100]' : 'opacity-0 group-hover:opacity-100 z-20'} transition-opacity flex items-center gap-1`}>
         {/* Nút Trả Lời (hiện cho mọi tin nhắn chưa thu hồi) */}
         {message.type !== 'RECALLED' && (
           <button
@@ -286,13 +292,13 @@ const MessageItem = ({
 
         {/* Menu 3 Chấm */}
         <div className="relative group/more" ref={menuRef}>
-          <button 
+          <button
             onClick={(e) => {
               handleMenuEnter(e);
               setIsMenuOpen(!isMenuOpen);
               setIsReactOpen(false);
             }}
-            className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors" 
+            className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
             title="Thêm tùy chọn"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -302,8 +308,8 @@ const MessageItem = ({
           {/* Dropdown Box */}
           <div className={`absolute ${dropdownPos === 'top' ? 'bottom-full pb-1' : 'top-full pt-1'} ${isOwn ? 'right-0' : 'left-0'} ${isMenuOpen ? 'block' : 'hidden'} z-[999] animate-fade-in w-max`}>
             <div className="bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden py-1.5 w-40 flex flex-col">
-              <button 
-                onClick={() => navigator.clipboard.writeText(message.type === 'TEXT' ? message.content : 'Tin nhắn')} 
+              <button
+                onClick={() => navigator.clipboard.writeText(message.type === 'TEXT' ? message.content : 'Tin nhắn')}
                 className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors"
               >
                 Copy tin nhắn
@@ -319,14 +325,14 @@ const MessageItem = ({
               )}
               {message.type !== 'RECALLED' && (
                 <>
-                  <button 
-                    onClick={() => onShare && onShare(message)} 
+                  <button
+                    onClick={() => onShare && onShare(message)}
                     className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors"
                   >
                     Chia sẻ
                   </button>
-                  <button 
-                    onClick={() => onPin(message)} 
+                  <button
+                    onClick={() => onPin(message)}
                     className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors"
                   >
                     Ghim tin nhắn
@@ -334,25 +340,25 @@ const MessageItem = ({
                 </>
               )}
               {isOwn && message.type !== 'RECALLED' && (
-                <button 
+                <button
                   onClick={async () => {
                     if (await useUIStore.getState().confirm('Thu hồi tin nhắn', 'Bạn có chắc chắn muốn thu hồi tin nhắn này với mọi người?')) {
                       messageApi.recallMessage(message.id).catch(console.error);
                     }
-                  }} 
+                  }}
                   className="w-full text-left px-3 py-2 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-2 transition-colors"
                 >
                   Thu hồi
                 </button>
               )}
-              <button 
-                onClick={handleDeleteForMe} 
+              <button
+                onClick={handleDeleteForMe}
                 className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
               >
                 Xóa phía tôi
               </button>
-              <button 
-                onClick={() => onEnableSelectionMode && onEnableSelectionMode(message.id)} 
+              <button
+                onClick={() => onEnableSelectionMode && onEnableSelectionMode(message.id)}
                 className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors border-t border-slate-100 dark:border-slate-700/50"
               >
                 Chọn nhiều
@@ -369,10 +375,10 @@ const MessageItem = ({
 
       <div
         className={[
-          message.type === 'IMAGE' ? 'bg-transparent' : 
+          message.type === 'IMAGE' ? 'bg-transparent' :
           message.type === 'RECALLED' ? 'px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-dashed text-slate-400 dark:text-slate-500 italic' : 'px-4 py-2.5',
           'rounded-2xl text-sm leading-relaxed break-words',
-          message.type === 'RECALLED' ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') : 
+          message.type === 'RECALLED' ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') :
           (message.type === 'IMAGE') ? (isOwn ? 'rounded-br-sm' : 'rounded-bl-sm') :
           (isOwn ? 'msg-mine rounded-br-sm' : 'msg-other rounded-bl-sm'),
           !isOwn && message.type !== 'RECALLED' && message.senderRole === 'ADMIN' ? 'border-[1px] border-amber-300/60 dark:border-amber-700/60' : '',
@@ -381,7 +387,7 @@ const MessageItem = ({
       >
         {/* Nếu có reply, hiển thị khối reply ở trên cùng */}
         {message.replyTo && (
-          <div 
+          <div
             onClick={() => {
               const el = document.getElementById(`msg-${message.replyToId}`);
               if (el) {
@@ -408,18 +414,18 @@ const MessageItem = ({
               try {
                 const preview = JSON.parse(message.linkPreview);
                 return (
-                  <a 
-                    href={preview.url} 
-                    target="_blank" 
+                  <a
+                    href={preview.url}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className={`block mt-2 w-[240px] sm:w-[280px] bg-white dark:bg-slate-800 border ${isOwn ? 'border-indigo-200/50 dark:border-indigo-700/50' : 'border-slate-200 dark:border-slate-700'} rounded-xl overflow-hidden hover:opacity-90 transition shadow-sm`}
                   >
                     {preview.image && (
                       <div className="w-full h-32 bg-slate-100 dark:bg-slate-900 relative">
-                        <img 
-                          src={preview.image} 
-                          alt="Preview" 
-                          className="w-full h-full object-cover" 
+                        <img
+                          src={preview.image}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
                           onError={(e) => {
                             // Ẩn ảnh nếu ảnh bị lỗi (như Facebook chặn hotlink)
                             e.target.parentElement.style.display = 'none';
@@ -447,9 +453,9 @@ const MessageItem = ({
             const isExternal = urls[0].startsWith('http');
             const imgUrl = isExternal ? urls[0] : `${process.env.REACT_APP_SOCKET_URL}${urls[0]}`;
             return (
-              <img 
-                src={imgUrl} 
-                alt={isExternal ? "Sticker" : "Image"} 
+              <img
+                src={imgUrl}
+                alt={isExternal ? "Sticker" : "Image"}
                 className={`rounded-xl object-contain ${isExternal ? 'w-24 h-24 sm:w-32 sm:h-32' : 'max-w-xs sm:max-w-sm max-h-64 cursor-pointer'}`}
                 onClick={() => !isExternal && onImageClick({ url: imgUrl, message, isOwn })}
               />
@@ -477,7 +483,7 @@ const MessageItem = ({
           }
         })()}
         {message.type === 'FILE' && (
-          <a 
+          <a
             href={message.content.startsWith('http') ? message.content : `${process.env.REACT_APP_SOCKET_URL}${message.content}`}
             target="_blank"
             rel="noopener noreferrer"
@@ -490,9 +496,9 @@ const MessageItem = ({
           </a>
         )}
         {message.type === 'AUDIO' && (
-          <WaveformPlayer 
-            audioUrl={`${process.env.REACT_APP_SOCKET_URL}${message.content}`} 
-            isOwn={isOwn} 
+          <WaveformPlayer
+            audioUrl={`${process.env.REACT_APP_SOCKET_URL}${message.content}`}
+            isOwn={isOwn}
           />
         )}
       </div>
@@ -500,7 +506,7 @@ const MessageItem = ({
       {/* Hiển thị danh sách Cảm xúc đã thả */}
       {message.reactions && message.reactions.length > 0 && (
         <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end mr-1' : 'justify-start ml-1'}`}>
-          <div 
+          <div
             onClick={() => onShowReactions(message.reactions)}
             className="flex items-center px-1.5 py-0.5 bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 rounded-full cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition"
           >
@@ -527,7 +533,7 @@ const MessageItem = ({
 
       {/* Read Receipts */}
       {readers?.length > 0 && (
-        <div 
+        <div
           onClick={() => onShowReaders && onShowReaders(readers)}
           className={`flex items-center gap-1 mt-1 cursor-pointer hover:opacity-80 transition-opacity ${isOwn ? 'justify-end mr-1' : 'justify-start ml-1'}`}
         >
@@ -550,12 +556,24 @@ const MessageItem = ({
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
 
+// Hook tự cập nhật mỗi 60 giây để hiển thị "Hoạt động X phút trước" chính xác
+const useTick = (intervalMs = 60000) => {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return tick;
+};
+
 const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const { theme } = useThemeStore();
   const activeConversation = useChatStore((s) => s.activeConversation);
   const onlineUsers = useChatStore((s) => s.onlineUsers);
   const userLastSeen = useChatStore((s) => s.userLastSeen);
   const conversationKey = activeConversation ? `${activeConversation.type}_${activeConversation.id}` : null;
+  // Tick mỗi 60s để component re-render và cập nhật "Hoạt động X phút trước"
+  useTick();
 
   // Tránh lỗi Infinite Loop của useSyncExternalStore bằng cách dùng mảng hằng số (EMPTY_ARRAY)
   const messages = useChatStore((s) => s.messages[conversationKey] || EMPTY_ARRAY);
@@ -564,7 +582,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
   const initMessages = useChatStore((s) => s.initMessages);
   const addMessage = useChatStore((s) => s.addMessage);
-  
+
   const pinnedMessages = useChatStore((s) => s.pinnedMessages[conversationKey] || EMPTY_ARRAY);
   const setPinnedMessages = useChatStore((s) => s.setPinnedMessages);
 
@@ -593,7 +611,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [selectedMessages, setSelectedMessages] = useState(new Set());
   const [isDraggingSelection, setIsDraggingSelection] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
-  
+
   const messagesEndRef = useRef(null);
   const typingTimerRef = useRef(null);
   const batchDeleteIntervalRef = useRef(null);
@@ -706,7 +724,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
     // Nếu đổi hội thoại, scroll tức thì (auto). Nếu có tin nhắn mới (length tăng), scroll mượt (smooth).
     const isNewConversation = previousConversationIdRef.current !== activeConversation?.id;
     const isNewMessage = messages.length > previousMessagesLengthRef.current;
-    
+
     if (isNewConversation) {
       messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
     } else if (isNewMessage) {
@@ -715,13 +733,13 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
     previousConversationIdRef.current = activeConversation?.id;
     previousMessagesLengthRef.current = messages.length;
-    
+
     // Đánh dấu đã đọc khi có tin nhắn mới hoặc mới mở chat
     if (messages.length > 0 && activeConversation) {
       const lastMessage = messages[messages.length - 1];
       const groupId = activeConversation.type === 'group' ? activeConversation.id : null;
       const partnerId = activeConversation.type === 'direct' ? activeConversation.id : null;
-      
+
       socketService.markRead(groupId, partnerId, lastMessage.id).then(() => {
         // Sau khi đánh dấu đọc xong, báo cho Sidebar cập nhật lại unreadCount
         window.dispatchEvent(new Event(groupId ? 'group_updated' : 'chat_updated'));
@@ -749,7 +767,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       }
       return;
     }
-    
+
     const replyToId = replyingTo ? replyingTo.id : null;
 
     try {
@@ -766,7 +784,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       // 2. Gửi file trong hàng chờ
       if (pendingFiles.length > 0) {
         setIsUploading(true);
-        
+
         const imageFiles = pendingFiles.filter(f => f.file.type.startsWith('image/'));
         const otherFiles = pendingFiles.filter(f => !f.file.type.startsWith('image/'));
 
@@ -778,7 +796,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
             imageUrls.push(res.data.data.url);
           }
           const combinedUrl = imageUrls.join('|');
-          
+
           if (activeConversation.type === 'group') {
             await socketService.sendGroupMessage(activeConversation.id, combinedUrl, 'IMAGE', replyToId);
           } else {
@@ -791,7 +809,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
         for (const pendingFile of otherFiles) {
           const res = await uploadApi.uploadFile(pendingFile.file);
           const fileData = res.data.data;
-          
+
           if (activeConversation.type === 'group') {
             await socketService.sendGroupMessage(activeConversation.id, fileData.url, 'FILE', replyToId);
           } else {
@@ -818,16 +836,16 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const handleSendAudio = async (audioBlob) => {
     setIsRecording(false);
     if (!audioBlob || audioBlob.size === 0) return;
-    
+
     const file = new File([audioBlob], `voice_${Date.now()}.webm`, { type: 'audio/webm' });
-    
+
     try {
       const res = await uploadApi.uploadFile(file);
       // res là Axios response, data thực sự nằm trong res.data
       const responseData = res.data;
       if (responseData.status === 'success') {
         const fileUrl = responseData.data ? responseData.data.url : responseData.url; // Xử lý cấu trúc response
-        
+
         if (activeConversation.type === 'group') {
           await socketService.sendGroupMessage(activeConversation.id, fileUrl, 'AUDIO', replyingTo?.id || null);
         } else {
@@ -933,7 +951,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       // Ngăn hành vi dán mặc định nếu có ảnh (tránh việc chèn URL ảnh nếu có)
       // Không preventDefault nếu người dùng dán text bình thường
       e.preventDefault();
-      
+
       const newPendingFiles = files.map(file => {
         if (file.size > 20 * 1024 * 1024) {
           useUIStore.getState().showAlert(`File ảnh vượt quá 20MB!`, 'warning');
@@ -975,13 +993,13 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
   const handleBatchCopy = async () => {
     if (selectedMessages.size === 0) return;
-    
+
     // Thu thập nội dung các tin nhắn văn bản đã chọn (Sắp xếp theo thứ tự hiển thị)
     const textsToCopy = [...selectedMessages]
       .map(id => messages.find(m => m.id === id))
       .filter(m => m && m.type === 'TEXT')
       .map(m => `[${formatTime(m.createdAt)}] ${m.sender?.fullName}: ${m.content}`);
-      
+
     if (textsToCopy.length === 0) {
       useUIStore.getState().showToast('Không có nội dung văn bản để copy.', 'warning');
       return;
@@ -998,27 +1016,27 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
   const handleBatchDelete = () => {
     if (selectedMessages.size === 0) return;
-    
+
     const messagesToDelete = new Set(selectedMessages);
     handleCancelSelection();
 
     setBatchDeleteState({ messages: messagesToDelete, countdown: 5 });
 
     if (batchDeleteIntervalRef.current) clearInterval(batchDeleteIntervalRef.current);
-    
+
     batchDeleteIntervalRef.current = setInterval(() => {
       setBatchDeleteState(prev => {
         if (!prev) return null;
         if (prev.countdown <= 1) {
           clearInterval(batchDeleteIntervalRef.current);
-          
+
           // Thực hiện xóa thực sự
           const promises = [...prev.messages].map(id => messageApi.deleteForMe(id));
           Promise.all(promises).catch(console.error);
           [...prev.messages].forEach(id => {
             useChatStore.getState().removeMessageForMe(activeConversation.type, activeConversation.id, id);
           });
-          
+
           return null;
         }
         return { ...prev, countdown: prev.countdown - 1 };
@@ -1033,7 +1051,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
   const handleBatchRecall = async () => {
     if (selectedMessages.size === 0) return;
-    
+
     // Lọc ra các tin nhắn của chính mình
     const myMsgIds = [...selectedMessages].filter(id => {
       const msg = messages.find(m => m.id === id);
@@ -1081,7 +1099,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
     if (!isSelectionMode || !isDraggingSelection) return;
     const touch = e.touches[0];
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
-    
+
     // Tìm message id từ id element
     if (el) {
       const msgWrapper = el.closest('[id^="msg-"]');
@@ -1104,7 +1122,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       {isSelectionMode ? (
         <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-slate-200/70 dark:border-slate-700/70 bg-indigo-50 dark:bg-slate-800/80 backdrop-blur-xl animate-fade-in z-30">
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={handleCancelSelection}
               className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors"
             >
@@ -1151,7 +1169,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
           </svg>
         </button>
 
-        <div 
+        <div
           className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => {
             if (activeConversation.type === 'direct') {
@@ -1173,27 +1191,42 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
           <div className="min-w-0 flex-1 pr-4">
             <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">{activeConversation.name}</p>
             <p className={`text-xs font-medium ${activeConversation.type === 'group' ? 'text-slate-500 dark:text-slate-400' : (onlineUsers[activeConversation.id] ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500')}`}>
-              {activeConversation.type === 'group' 
+              {activeConversation.type === 'group'
                 ? `Cộng đồng • ${activeConversation.memberCount || 0} thành viên`
-                : (onlineUsers[activeConversation.id] 
-                    ? 'Đang hoạt động' 
-                    : (userLastSeen[activeConversation.id] 
-                        ? `Hoạt động ${formatDistanceToNow(new Date(userLastSeen[activeConversation.id]), { addSuffix: true, locale: vi })}` 
+                : (onlineUsers[activeConversation.id]
+                    ? 'Đang hoạt động'
+                    : (userLastSeen[activeConversation.id]
+                        ? `Hoạt động ${formatDistanceToNow(new Date(userLastSeen[activeConversation.id]), { addSuffix: true, locale: vi })}`
                         : 'Không hoạt động'))}
             </p>
           </div>
         </div>
 
-        {/* Nút xem thông tin hội thoại (Right Sidebar) */}
-        <button
-          onClick={onToggleRightSidebar}
-          title="Thông tin hội thoại"
-          className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 transition ml-auto"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
+        {/* Các nút công cụ */}
+        <div className="flex items-center gap-1 sm:gap-2 ml-auto">
+          {/* Nút tìm kiếm */}
+          <button
+            onClick={() => {
+              useUIStore.getState().setRightSidebarTab('search');
+              window.dispatchEvent(new CustomEvent('force-open-right-sidebar'));
+            }}
+            title="Tìm kiếm tin nhắn"
+            className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 transition"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          </button>
+
+          {/* Nút xem thông tin hội thoại (Right Sidebar) */}
+          <button
+            onClick={onToggleRightSidebar}
+            title="Thông tin hội thoại"
+            className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 transition"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+        </div>
       </div>
       )}
 
@@ -1214,7 +1247,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       {/* Pinned Header */}
       {pinnedMessages && pinnedMessages.length > 0 && (
         <div className="relative">
-          <div 
+          <div
             className="bg-amber-50/50 dark:bg-amber-900/10 border-b border-amber-100 dark:border-amber-900/30 px-4 py-2 flex items-center justify-between group cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20 transition"
             onClick={() => setIsPinnedDropdownOpen(!isPinnedDropdownOpen)}
           >
@@ -1231,7 +1264,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                 </p>
               </div>
             </div>
-            
+
             <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 text-slate-400 transition-transform ${isPinnedDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
@@ -1245,7 +1278,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">
                     {pin.message?.sender?.fullName?.charAt(0) || '?'}
                   </div>
-                  <div 
+                  <div
                     className="flex-1 min-w-0 cursor-pointer"
                     onClick={() => {
                       const el = document.getElementById(`msg-${pin.messageId}`);
@@ -1282,7 +1315,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       )}
 
       {/* Vùng tin nhắn */}
-      <div 
+      <div
         ref={messagesContainerRef}
         id="scrollable-messages-container"
         className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-4 select-none custom-scrollbar"
@@ -1335,14 +1368,14 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
             .map(([uid, uData]) => uData);
 
           return (
-            <MessageItem 
-              key={msg.id} 
-              message={msg} 
-              isOwn={msg.senderId === currentUser?.id} 
-              readers={readers} 
-              isAdmin={activeConversation?.role === 'ADMIN' || activeConversation?.role === 'DEPUTY'} 
-              onReply={setReplyingTo} 
-              onPin={handlePinMessage} 
+            <MessageItem
+              key={msg.id}
+              message={msg}
+              isOwn={msg.senderId === currentUser?.id}
+              readers={readers}
+              isAdmin={activeConversation?.role === 'ADMIN' || activeConversation?.role === 'DEPUTY'}
+              onReply={setReplyingTo}
+              onPin={handlePinMessage}
               onShare={(msg) => {
                 setMessagesToShare([msg]);
                 setIsShareModalOpen(true);
@@ -1352,7 +1385,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                 setInputText(msg.type === 'TEXT' ? msg.content : '');
                 setReplyingTo(null);
               }}
-              onImageClick={setPreviewImage} 
+              onImageClick={setPreviewImage}
               onShowReactions={setReactionsToShow}
               onShowReaders={setReadersToShow}
               onReact={(message, emoji) => {
@@ -1366,9 +1399,14 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
               onDeleteForMe={async (messageId) => {
                 try {
                   await messageApi.deleteForMe(messageId);
+                  // Xóa khỏi danh sách tin nhắn
                   useChatStore.getState().removeMessageForMe(activeConversation.type, activeConversation.id, messageId);
+                  // Ẩn khỏi danh sách ghim phía mình (pin vẫn tồn tại cho đối phương)
+                  useChatStore.getState().removePinnedMessage(activeConversation.type, activeConversation.id, messageId);
                 } catch (error) {
-                  useUIStore.getState().showAlert('Có lỗi xảy ra khi xóa tin nhắn', 'error');
+                  console.error('Lỗi khi xóa tin nhắn:', error);
+                  useUIStore.getState().showAlert(error.response?.data?.message || 'Có lỗi xảy ra khi xóa tin nhắn', 'error');
+                  throw error; // Ném ra để MessageItem bắt và reset UI
                 }
               }}
               isFirstInGroup={isFirstInGroup}
@@ -1445,7 +1483,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
           )}
 
           <div className="flex items-end gap-2">
-            
+
             {/* Nút Upload Ảnh */}
             <button
               type="button"
@@ -1458,12 +1496,12 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </button>
-            <input 
-              type="file" 
-              ref={imageInputRef} 
-              hidden 
+            <input
+              type="file"
+              ref={imageInputRef}
+              hidden
               multiple
-              accept="image/*" 
+              accept="image/*"
               onChange={handleFileSelect}
             />
 
@@ -1479,19 +1517,19 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
               </svg>
             </button>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              hidden 
+            <input
+              type="file"
+              ref={fileInputRef}
+              hidden
               multiple
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt" 
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt"
               onChange={handleFileSelect}
             />
 
             {isRecording ? (
-              <AudioRecorder 
-                onSend={handleSendAudio} 
-                onCancel={() => setIsRecording(false)} 
+              <AudioRecorder
+                onSend={handleSendAudio}
+                onCancel={() => setIsRecording(false)}
               />
             ) : (
               <>
@@ -1624,7 +1662,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                               EMOJI
                             </button>
                           </div>
-                          
+
                           {/* Content */}
                           <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-900/50">
                             {emojiTab === 'EMOJI' ? (
@@ -1645,9 +1683,9 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                               <div className="flex flex-col h-full bg-white dark:bg-slate-900">
                                 <div className="p-2 border-b border-slate-100 dark:border-slate-800">
                                   <div className="relative mb-2">
-                                    <input 
-                                      type="text" 
-                                      placeholder="Tìm kiếm nhãn dán..." 
+                                    <input
+                                      type="text"
+                                      placeholder="Tìm kiếm nhãn dán..."
                                       value={stickerQuery}
                                       onChange={(e) => setStickerQuery(e.target.value)}
                                       className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none"
@@ -1692,7 +1730,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                       </>
                     )}
                   </div>
-                  
+
                   <button
                     onClick={() => setIsRecording(true)}
                     className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 active:scale-95 transition-all duration-150"
@@ -1726,9 +1764,9 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
       {/* Render Modal Xem Ảnh Phóng To */}
       {previewImage && (
-        <ImageViewerModal 
-          previewData={previewImage} 
-          onClose={() => setPreviewImage(null)} 
+        <ImageViewerModal
+          previewData={previewImage}
+          onClose={() => setPreviewImage(null)}
           onGoToMessage={(messageId) => {
             const el = document.getElementById(`msg-${messageId}`);
             if (el) {
@@ -1741,7 +1779,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       )}
 
       {/* Render User Profile Modal */}
-      <UserProfileModal 
+      <UserProfileModal
         isOpen={isUserProfileModalOpen}
         onClose={() => setIsUserProfileModalOpen(false)}
         userId={activeConversation.type === 'direct' ? activeConversation.id : null}

@@ -1,18 +1,45 @@
 import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import groupApi from '../../api/group.api';
 import messageApi from '../../api/message.api';
+import userApi from '../../api/user.api';
 import useAuthStore from '../../stores/auth.store';
 import { useUIStore } from '../../stores/ui.store';
 import useChatStore from '../../stores/chat.store';
 import GroupMembersModal from './GroupMembersModal';
 import ImageViewerModal from './ImageViewerModal';
+import CreateGroupModal from './CreateGroupModal';
+import GroupSettingsModal from './GroupSettingsModal';
+
 const EMPTY_ARRAY = [];
+
+// Component nút bấm tròn (ActionBtn)
+const ActionBtn = ({ icon, label, onClick, isActive, activeIcon }) => {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-2 group w-18"
+    >
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+        isActive 
+          ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
+          : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+      }`}>
+        {isActive && activeIcon ? activeIcon : icon}
+      </div>
+      <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 text-center leading-tight">
+        {label}
+      </span>
+    </button>
+  );
+};
 
 const RightSidebar = ({ onClose, onImageClick }) => {
   const activeConversation = useChatStore((s) => s.activeConversation);
   const currentUser = useAuthStore((s) => s.user);
 
-  const [activeTab, setActiveTab] = useState('info'); // info | search
+  const activeTab = useUIStore((s) => s.rightSidebarTab);
+  const setActiveTab = useUIStore((s) => s.setRightSidebarTab);
   const [media, setMedia] = useState([]);
   const [files, setFiles] = useState([]);
 
@@ -24,6 +51,8 @@ const RightSidebar = ({ onClose, onImageClick }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
+
+
   // Accordion state cho Tab Info
   const [isMediaOpen, setIsMediaOpen] = useState(true);
   const [isFileOpen, setIsFileOpen] = useState(false);
@@ -31,6 +60,55 @@ const RightSidebar = ({ onClose, onImageClick }) => {
   const [lightboxUrl, setLightboxUrl] = useState(null);
 
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+
+  const queryClient = useQueryClient();
+
+  // Gọi API lấy Pinned Conversations
+  const { data: pinnedConversationsData } = useQuery({
+    queryKey: ['pinned-conversations'],
+    queryFn: () => userApi.getPinnedConversations().then((r) => r.data.data),
+  });
+  const pinnedConversations = pinnedConversationsData || [];
+
+  // Gọi API lấy Muted Conversations
+  const { data: mutedConversationsData } = useQuery({
+    queryKey: ['muted-conversations'],
+    queryFn: () => userApi.getMutedConversations().then((r) => r.data.data),
+  });
+  const mutedConversations = mutedConversationsData || [];
+
+  const isPinned = activeConversation ? pinnedConversations.some(p => String(p.type).toUpperCase() === String(activeConversation.type).toUpperCase() && Number(p.entityId) === Number(activeConversation.id)) : false;
+  const isMuted = activeConversation ? mutedConversations.some(m => String(m.type).toUpperCase() === String(activeConversation.type).toUpperCase() && Number(m.entityId) === Number(activeConversation.id)) : false;
+
+  const handleTogglePin = async () => {
+    if (!activeConversation) return;
+    try {
+      if (isPinned) {
+        await userApi.unpinConversation(activeConversation.type.toUpperCase(), activeConversation.id);
+      } else {
+        await userApi.pinConversation(activeConversation.type.toUpperCase(), activeConversation.id);
+      }
+      queryClient.invalidateQueries(['pinned-conversations']);
+    } catch (error) {
+      useUIStore.getState().showAlert('Có lỗi xảy ra khi cập nhật ghim');
+    }
+  };
+
+  const handleToggleMute = async () => {
+    if (!activeConversation) return;
+    try {
+      if (isMuted) {
+        await userApi.unmuteConversation(activeConversation.type.toUpperCase(), activeConversation.id);
+      } else {
+        await userApi.muteConversation(activeConversation.type.toUpperCase(), activeConversation.id);
+      }
+      queryClient.invalidateQueries(['muted-conversations']);
+    } catch (error) {
+      useUIStore.getState().showAlert('Có lỗi xảy ra khi cập nhật thông báo');
+    }
+  };
 
   useEffect(() => {
     if (!activeConversation) return;
@@ -143,11 +221,13 @@ const RightSidebar = ({ onClose, onImageClick }) => {
       {/* Header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex-shrink-0">
         <h2 className="text-base font-semibold text-slate-800 dark:text-white">Thông tin hội thoại</h2>
-        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -164,27 +244,56 @@ const RightSidebar = ({ onClose, onImageClick }) => {
           )}
           <h3 className="text-lg font-bold text-slate-800 dark:text-white">{activeConversation.name}</h3>
 
-          <div className="flex gap-4 mt-4">
-            <button
-              onClick={() => setActiveTab('search')}
-              className="flex flex-col items-center gap-1 group"
-            >
-              <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 group-hover:bg-slate-200 dark:group-hover:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 transition">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              </div>
-              <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">Tìm kiếm</span>
-            </button>
-
-            {activeConversation.type === 'group' && (
-              <button
-                onClick={() => setIsMembersModalOpen(true)}
-                className="flex flex-col items-center gap-1 group"
-              >
-                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 group-hover:bg-slate-200 dark:group-hover:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 transition">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                </div>
-                <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">Thành viên</span>
-              </button>
+          <div className="flex items-start justify-center gap-2 sm:gap-4 mt-6">
+            {activeConversation.type === 'direct' ? (
+              <>
+                <ActionBtn 
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>}
+                  activeIcon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h3.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>}
+                  label={isMuted ? "Bật thông báo" : "Tắt thông báo"} 
+                  isActive={isMuted}
+                  onClick={handleToggleMute} 
+                />
+                <ActionBtn 
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>}
+                  activeIcon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" /></svg>}
+                  label={isPinned ? "Bỏ ghim hội thoại" : "Ghim hội thoại"} 
+                  isActive={isPinned}
+                  onClick={handleTogglePin} 
+                />
+                <ActionBtn 
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>}
+                  label="Tạo nhóm trò chuyện" 
+                  onClick={() => setIsCreateGroupModalOpen(true)} 
+                />
+              </>
+            ) : (
+              <>
+                <ActionBtn 
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>}
+                  activeIcon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h3.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>}
+                  label={isMuted ? "Bật thông báo" : "Tắt thông báo"} 
+                  isActive={isMuted}
+                  onClick={handleToggleMute} 
+                />
+                <ActionBtn 
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>}
+                  activeIcon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" /></svg>}
+                  label={isPinned ? "Bỏ ghim hội thoại" : "Ghim hội thoại"} 
+                  isActive={isPinned}
+                  onClick={handleTogglePin} 
+                />
+                <ActionBtn 
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>}
+                  label="Thêm thành viên" 
+                  onClick={() => setIsMembersModalOpen(true)} 
+                />
+                <ActionBtn 
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+                  label="Quản lý nhóm" 
+                  onClick={() => setIsSettingsModalOpen(true)} 
+                />
+              </>
             )}
           </div>
         </div>
@@ -352,6 +461,31 @@ const RightSidebar = ({ onClose, onImageClick }) => {
         <ImageViewerModal
           previewData={lightboxUrl}
           onClose={() => setLightboxUrl(null)}
+        />
+      )}
+
+      {/* Tạo nhóm trò chuyện từ 1-1 */}
+      {activeConversation.type === 'direct' && (
+        <CreateGroupModal
+          isOpen={isCreateGroupModalOpen}
+          onClose={() => setIsCreateGroupModalOpen(false)}
+          onSuccess={() => setIsCreateGroupModalOpen(false)}
+          initialSelectedUsers={[{
+            id: activeConversation.id,
+            fullName: activeConversation.name,
+            avatar: activeConversation.avatar
+          }]}
+        />
+      )}
+
+      {/* Quản lý nhóm (Mock UI) */}
+      {activeConversation.type === 'group' && (
+        <GroupSettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          groupId={activeConversation.id}
+          isReadOnly={activeConversation.isReadOnly}
+          isAdmin={isAdmin}
         />
       )}
     </div>

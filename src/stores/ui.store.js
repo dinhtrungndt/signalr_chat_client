@@ -3,6 +3,9 @@ import { create } from 'zustand';
 export const useUIStore = create((set, get) => ({
   toast: null,
   confirmDialog: null,
+  rightSidebarTab: 'info', // 'info' | 'search'
+
+  setRightSidebarTab: (tab) => set({ rightSidebarTab: tab }),
 
   // Hiển thị thông báo (toast)
   showToast: (message, type = 'info') => {

@@ -257,6 +257,21 @@ const Sidebar = ({ onItemClick }) => {
   });
   const recentChats = recentChatsData || [];
 
+  // Populate lastSeen data from recentChats
+  useEffect(() => {
+    if (recentChatsData) {
+      recentChatsData.forEach(chat => {
+        if (chat.lastSeen) {
+           useChatStore.getState().setOnlineStatus(
+             chat.id, 
+             useChatStore.getState().onlineUsers[chat.id] || false, 
+             chat.lastSeen
+           );
+        }
+      });
+    }
+  }, [recentChatsData]);
+
   const queryClient = useQueryClient();
 
   // Gọi API lấy Pinned Conversations

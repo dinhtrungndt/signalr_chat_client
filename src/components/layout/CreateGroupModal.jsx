@@ -5,10 +5,10 @@ import groupApi from '../../api/group.api';
 import userApi from '../../api/user.api';
 import useDebounce from '../../hooks/useDebounce';
 
-const CreateGroupModal = ({ isOpen, onClose, onSuccess }) => {
+const CreateGroupModal = ({ isOpen, onClose, onSuccess, initialSelectedUsers = [] }) => {
   const [groupName, setGroupName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState(initialSelectedUsers);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -77,7 +77,7 @@ const CreateGroupModal = ({ isOpen, onClose, onSuccess }) => {
       onClose();
       // Reset form
       setGroupName('');
-      setSelectedUsers([]);
+      setSelectedUsers(initialSelectedUsers);
       setSearchQuery('');
     } catch (err) {
       setError(err.response?.data?.message || 'Có lỗi xảy ra khi tạo nhóm');
