@@ -3,6 +3,7 @@ import useAuthStore from '../stores/auth.store';
 import useChatStore from '../stores/chat.store';
 import useCallStore from '../stores/call.store';
 import tokenStorage from '../utils/tokenStorage';
+import { queryClient } from '../App';
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:1411';
 
@@ -357,6 +358,40 @@ const socketService = {
 
     socket.on('call_request', ({ callerId, callerInfo, callType }) => {
       useCallStore.getState().receiveCall(callerId, callerInfo, callType);
+    });
+
+    // ==========================================
+    // SỰ KIỆN TỪ ADMIN CHỈNH SỬA
+    // ==========================================
+    socket.on('group_deleted', ({ groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      
+      // Nếu đang mở group đó thì thoát ra
+      const activeConv = useChatStore.getState().activeConversation;
+      if (activeConv && activeConv.id === groupId) {
+        useChatStore.getState().setActiveConversation(null);
+      }
+    });
+
+    socket.on('user_kicked_from_group', ({ groupId, userId }) => {
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.id === userId) {
+        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        
+        // Nếu đang mở group đó thì thoát ra
+        const activeConv = useChatStore.getState().activeConversation;
+        if (activeConv && activeConv.id === groupId) {
+          useChatStore.getState().setActiveConversation(null);
+        }
+      }
+    });
+
+    socket.on('user_updated', () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+    });
+    
+    socket.on('user_deleted', () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
     });
 
     socket.on('call_accept', async () => {

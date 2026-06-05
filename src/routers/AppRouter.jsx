@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import ChatPage from '../pages/ChatPage';
 import LoginPage from '../pages/LoginPage';
-import RegisterPage from '../pages/RegisterPage';
 import QRScanPage from '../pages/QRScanPage';
 import useAuthStore from '../stores/auth.store';
 
@@ -43,7 +42,7 @@ const AppRouter = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+        {/* <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} /> */}
         <Route path="/qr-scan" element={<PrivateRoute><QRScanPage /></PrivateRoute>} />
         <Route path="/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/chat" replace />} />
