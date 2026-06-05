@@ -3,8 +3,11 @@ import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import userApi from '../../api/user.api';
+import useChatStore from '../../stores/chat.store';
+import useAuthStore from '../../stores/auth.store';
 
 const UserProfileModal = ({ isOpen, onClose, userId }) => {
+  const currentUser = useAuthStore((s) => s.user);
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -111,9 +114,25 @@ const UserProfileModal = ({ isOpen, onClose, userId }) => {
               </div>
 
               <div className="mt-6 flex gap-3">
+                {profile.id !== currentUser?.id && (
+                  <button 
+                    onClick={() => {
+                      useChatStore.getState().setActiveConversation({
+                        type: 'direct',
+                        id: profile.id,
+                        name: profile.fullName,
+                        avatar: profile.avatar,
+                      });
+                      onClose();
+                    }}
+                    className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition shadow-sm shadow-indigo-200"
+                  >
+                    Nhắn tin
+                  </button>
+                )}
                 <button 
                   onClick={onClose}
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition shadow-sm shadow-indigo-200"
+                  className={`py-2.5 rounded-xl text-sm font-semibold transition ${profile.id !== currentUser?.id ? 'flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' : 'flex-1 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200'}`}
                 >
                   Đóng
                 </button>

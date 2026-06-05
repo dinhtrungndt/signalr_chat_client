@@ -2,7 +2,7 @@ import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-quer
 import { format, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import EmojiPicker from 'emoji-picker-react';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import groupApi from '../../api/group.api';
 import messageApi from '../../api/message.api';
 import uploadApi from '../../api/upload.api';
@@ -42,13 +42,19 @@ const formatTime = (dateStr) => {
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
 
-const renderTextWithLinks = (text) => {
+const renderTextWithLinks = (text, onUserClick, groupMembers = []) => {
   if (!text) return null;
-  // Regex để tìm các URL (bắt đầu bằng http, https, hoặc www.)
-  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
-  const parts = text.split(urlRegex);
+  
+  // Regex để tìm các URL hoặc @username
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/i;
+  const mentionRegex = /(@[a-zA-Z0-9_]+)/i;
+  const combinedRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|@[a-zA-Z0-9_]+)/gi;
+
+  const parts = text.split(combinedRegex);
 
   return parts.map((part, i) => {
+    if (!part) return null;
+
     if (part.match(urlRegex)) {
       const href = part.startsWith('http') ? part : `http://${part}`;
       // Cắt ngắn link nếu quá dài để giao diện gọn gàng hơn
@@ -59,7 +65,7 @@ const renderTextWithLinks = (text) => {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="underline hover:opacity-80 transition-opacity break-all font-medium"
+          className="underline hover:opacity-80 transition-opacity break-all font-medium text-indigo-600 dark:text-indigo-400"
           onClick={(e) => e.stopPropagation()}
           title={part} // Hiện tooltip toàn bộ link khi hover
         >
@@ -67,6 +73,33 @@ const renderTextWithLinks = (text) => {
         </a>
       );
     }
+
+    if (part.match(mentionRegex)) {
+      const usernameMatch = part.slice(1);
+      const matchedUser = groupMembers.find(m => m.username === usernameMatch);
+
+      if (matchedUser && onUserClick) {
+        return (
+          <span 
+            key={i} 
+            className="font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1 rounded inline-block cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              onUserClick(matchedUser.id);
+            }}
+          >
+            {part}
+          </span>
+        );
+      }
+
+      return (
+        <span key={i} className="font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1 rounded inline-block">
+          {part}
+        </span>
+      );
+    }
+
     // Sử dụng dangerouslySetInnerHTML cho ngắt dòng nếu cần, hoặc đơn giản giữ nguyên
     return <span key={i}>{part}</span>;
   });
@@ -74,7 +107,7 @@ const renderTextWithLinks = (text) => {
 
 const MessageItem = ({
   message, isOwn, readers, isAdmin,
-  onReply, onPin, onShare, onEdit, onImageClick, onReact, onShowReactions, onShowReaders, onDeleteForMe,
+  onReply, onPin, onShare, onEdit, onImageClick, onReact, onShowReactions, onShowReaders, onDeleteForMe, onUserClick, groupMembers,
   isFirstInGroup = true, isLastInGroup = true,
   isSelectionMode = false, isSelected = false, onToggleSelect = null, onEnableSelectionMode = null, isDraggingSelection = false
 }) => {
@@ -218,7 +251,7 @@ const MessageItem = ({
       {/* Avatar người gửi (chỉ hiện khi không phải mình) */}
       {!isOwn && (
         isLastInGroup ? (
-          <div className="relative flex-shrink-0">
+          <div className="relative flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => onUserClick && onUserClick(message.senderId)}>
             {message.sender?.avatar ? (
               <img src={`${process.env.REACT_APP_SOCKET_URL}${message.sender.avatar}`} alt="Avatar" className={`w-7 h-7 rounded-full object-cover ${message.senderRole === 'ADMIN' ? 'border-[1.5px] border-amber-400' : (message.senderRole === 'DEPUTY' ? 'border-[1.5px] border-slate-400' : '')}`} />
             ) : (
@@ -374,7 +407,12 @@ const MessageItem = ({
 
       {/* Tên người gửi (chỉ hiện với group chat, không phải mình) */}
       {!isOwn && message.groupId && isFirstInGroup && (
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 ml-1">{message.sender?.fullName}</p>
+        <p 
+          className="text-xs text-slate-500 dark:text-slate-400 mb-1 ml-1 inline-block cursor-pointer hover:underline hover:text-indigo-500 transition-colors"
+          onClick={() => onUserClick && onUserClick(message.senderId)}
+        >
+          {message.sender?.fullName}
+        </p>
       )}
 
       <div
@@ -413,7 +451,7 @@ const MessageItem = ({
 
         {message.type === 'TEXT' && (
           <div className="flex flex-col">
-            <div>{renderTextWithLinks(message.content)}</div>
+            <div>{renderTextWithLinks(message.content, onUserClick, groupMembers)}</div>
             {message.linkPreview && (() => {
               try {
                 const preview = JSON.parse(message.linkPreview);
@@ -599,6 +637,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [isGroupMembersModalOpen, setIsGroupMembersModalOpen] = useState(false);
   const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
+  const [profileUserId, setProfileUserId] = useState(null); // ID of user to show profile for
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [messagesToShare, setMessagesToShare] = useState([]);
   const [isPinnedDropdownOpen, setIsPinnedDropdownOpen] = useState(false);
@@ -620,6 +659,10 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState('');
+  
+  // Tag (Mention) state
+  const [mentionQuery, setMentionQuery] = useState(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
 
   const messagesEndRef = useRef(null);
   const typingTimerRef = useRef(null);
@@ -628,7 +671,46 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const imageInputRef = useRef(null);
   const avatarInputRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const textareaRef = useRef(null);
   const queryClient = useQueryClient();
+
+  // Fetch group members for Mentions
+  const { data: groupMembersData } = useQuery({
+    queryKey: ['group-members', activeConversation?.id],
+    queryFn: () => groupApi.getGroupTree(activeConversation?.id).then((r) => r.data.data),
+    enabled: activeConversation?.type === 'group' && !!activeConversation?.id,
+  });
+
+  const groupMembers = useMemo(() => {
+    if (!groupMembersData) return [];
+    
+    // Flatten group members tree
+    const flatten = (nodes) => {
+      let result = [];
+      nodes.forEach((node) => {
+        if (node.user) result.push(node.user);
+        if (node.children && node.children.length > 0) {
+          result = result.concat(flatten(node.children));
+        }
+      });
+      return result;
+    };
+    
+    const flatUsers = flatten(groupMembersData);
+    // Xoá trùng lặp nếu có
+    return Array.from(new Map(flatUsers.map(item => [item.id, item])).values());
+  }, [groupMembersData]);
+
+  const mentionCandidates = useMemo(() => {
+    if (mentionQuery === null || groupMembers.length === 0) return [];
+    
+    const q = mentionQuery.toLowerCase();
+    return groupMembers.filter(u => 
+      u.id !== currentUser?.id &&
+      ((u.fullName || '').toLowerCase().includes(q) || 
+       (u.username || '').toLowerCase().includes(q))
+    ).slice(0, 10);
+  }, [groupMembers, mentionQuery, currentUser?.id]);
 
   // Fetch lịch sử tin nhắn từ API
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
@@ -962,9 +1044,22 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
     });
   };
 
-  // Xử lý typing indicator
   const handleInputChange = (e) => {
-    setInputText(e.target.value);
+    const val = e.target.value;
+    setInputText(val);
+
+    // Xử lý Tag (@mention)
+    const cursorPosition = e.target.selectionStart;
+    const textBeforeCursor = val.slice(0, cursorPosition);
+    const words = textBeforeCursor.split(/\s/);
+    const currentWord = words[words.length - 1];
+
+    if (activeConversation.type === 'group' && currentWord.startsWith('@')) {
+      setMentionQuery(currentWord.slice(1));
+      setMentionIndex(0);
+    } else {
+      setMentionQuery(null);
+    }
 
     socketService.sendTyping(
       activeConversation.type === 'group' ? activeConversation.id : null,
@@ -980,7 +1075,54 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
     }, 2000);
   };
 
+  const handleSelectMention = (user) => {
+    if (!textareaRef.current) return;
+    const cursorPosition = textareaRef.current.selectionStart;
+    const textBeforeCursor = inputText.slice(0, cursorPosition);
+    const textAfterCursor = inputText.slice(cursorPosition);
+    
+    const words = textBeforeCursor.split(/\s/);
+    const currentWord = words[words.length - 1];
+    
+    if (currentWord.startsWith('@')) {
+      const newTextBeforeCursor = textBeforeCursor.slice(0, -currentWord.length) + `@${user.username} `;
+      setInputText(newTextBeforeCursor + textAfterCursor);
+      
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(newTextBeforeCursor.length, newTextBeforeCursor.length);
+        }
+      }, 0);
+    }
+    
+    setMentionQuery(null);
+  };
+
   const handleKeyDown = (e) => {
+    // Xử lý Mention Dropdown navigation
+    if (mentionQuery !== null && mentionCandidates.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setMentionIndex((prev) => (prev + 1) % mentionCandidates.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setMentionIndex((prev) => (prev - 1 + mentionCandidates.length) % mentionCandidates.length);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        handleSelectMention(mentionCandidates[mentionIndex]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        setMentionQuery(null);
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -1476,6 +1618,11 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
               isOwn={msg.senderId === currentUser?.id}
               readers={readers}
               isAdmin={activeConversation?.role === 'ADMIN' || activeConversation?.role === 'DEPUTY'}
+              onUserClick={(userId) => {
+                setProfileUserId(userId);
+                setIsUserProfileModalOpen(true);
+              }}
+              groupMembers={groupMembers}
               onReply={setReplyingTo}
               onPin={handlePinMessage}
               onShare={(msg) => {
@@ -1708,7 +1855,34 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                 </div>
               )}
 
+              {/* Gợi ý Tag (Mention) Dropdown */}
+              {mentionQuery !== null && mentionCandidates.length > 0 && (
+                <div className="absolute bottom-full left-4 mb-2 w-64 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden z-50 animate-fade-in-up">
+                  <div className="px-3 py-2 text-xs font-semibold text-slate-500 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
+                    Tag thành viên
+                  </div>
+                  <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                    {mentionCandidates.map((user, idx) => (
+                      <div
+                        key={user.id}
+                        onClick={() => handleSelectMention(user)}
+                        className={`px-3 py-2 flex items-center gap-2 cursor-pointer transition-colors ${idx === mentionIndex ? 'bg-indigo-50 dark:bg-indigo-900/40' : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                      >
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-[10px] shrink-0">
+                          {user.fullName?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-sm font-medium text-slate-900 dark:text-white truncate">{user.fullName}</span>
+                          <span className="text-[10px] text-slate-500 truncate">@{user.username}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <textarea
+                ref={textareaRef}
                 value={inputText}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
@@ -1883,8 +2057,8 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       {/* Render User Profile Modal */}
       <UserProfileModal
         isOpen={isUserProfileModalOpen}
-        onClose={() => setIsUserProfileModalOpen(false)}
-        userId={activeConversation.type === 'direct' ? activeConversation.id : null}
+        onClose={() => { setIsUserProfileModalOpen(false); setProfileUserId(null); }}
+        userId={profileUserId || (activeConversation.type === 'direct' ? activeConversation.id : null)}
       />
 
       {/* Render Share Message Modal */}
