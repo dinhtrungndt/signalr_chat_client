@@ -252,6 +252,31 @@ const socketService = {
     });
 
     // ==========================================
+    // SỰ KIỆN GHI CHÚ, NHẮC HẸN, BÌNH CHỌN
+    // ==========================================
+    socket.on('note_created', (data) => {
+      window.dispatchEvent(new CustomEvent('note_created', { detail: data }));
+    });
+    socket.on('note_deleted', (data) => {
+      window.dispatchEvent(new CustomEvent('note_deleted', { detail: data }));
+    });
+    socket.on('reminder_created', (data) => {
+      window.dispatchEvent(new CustomEvent('reminder_created', { detail: data }));
+    });
+    socket.on('reminder_updated', (data) => {
+      window.dispatchEvent(new CustomEvent('reminder_updated', { detail: data }));
+    });
+    socket.on('reminder_deleted', (data) => {
+      window.dispatchEvent(new CustomEvent('reminder_deleted', { detail: data }));
+    });
+    socket.on('poll_created', (data) => {
+      window.dispatchEvent(new CustomEvent('poll_created', { detail: data }));
+    });
+    socket.on('poll_updated', (data) => {
+      window.dispatchEvent(new CustomEvent('poll_updated', { detail: data }));
+    });
+
+    // ==========================================
     // SỰ KIỆN THẢ CẢM XÚC TIN NHẮN
     // ==========================================
     socket.on('message_reacted', (data) => {

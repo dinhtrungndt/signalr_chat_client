@@ -6,10 +6,16 @@ import userApi from '../../api/user.api';
 import useAuthStore from '../../stores/auth.store';
 import { useUIStore } from '../../stores/ui.store';
 import useChatStore from '../../stores/chat.store';
+import noteApi from '../../api/note.api';
+import reminderApi from '../../api/reminder.api';
+import pollApi from '../../api/poll.api';
 import GroupMembersModal from './GroupMembersModal';
 import ImageViewerModal from './ImageViewerModal';
 import CreateGroupModal from './CreateGroupModal';
 import GroupSettingsModal from './GroupSettingsModal';
+import CreateNoteModal from './CreateNoteModal';
+import CreateReminderModal from './CreateReminderModal';
+import CreatePollModal from './CreatePollModal';
 
 const EMPTY_ARRAY = [];
 
@@ -54,12 +60,18 @@ const RightSidebar = ({ onClose, onImageClick }) => {
   // Accordion state cho Tab Info
   const [isMediaOpen, setIsMediaOpen] = useState(true);
   const [isFileOpen, setIsFileOpen] = useState(false);
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [isPollsOpen, setIsPollsOpen] = useState(false);
   const [isSettingOpen, setIsSettingOpen] = useState(true);
   const [lightboxUrl, setLightboxUrl] = useState(null);
 
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+  
+  const [isCreateNoteModalOpen, setIsCreateNoteModalOpen] = useState(false);
+  const [isCreateReminderModalOpen, setIsCreateReminderModalOpen] = useState(false);
+  const [isCreatePollModalOpen, setIsCreatePollModalOpen] = useState(false);
 
   // Edit group state
   const [isEditingName, setIsEditingName] = useState(false);
@@ -81,6 +93,27 @@ const RightSidebar = ({ onClose, onImageClick }) => {
     queryFn: () => userApi.getMutedConversations().then((r) => r.data.data),
   });
   const mutedConversations = mutedConversationsData || [];
+
+  const { data: notesData } = useQuery({
+    queryKey: ['notes', activeConversation?.id],
+    queryFn: () => noteApi.getNotes(activeConversation?.type === 'group' ? { groupId: activeConversation.id } : { partnerId: activeConversation.id }).then(r => r.data.data),
+    enabled: !!activeConversation
+  });
+  const notesList = notesData || [];
+
+  const { data: remindersData } = useQuery({
+    queryKey: ['reminders', activeConversation?.id],
+    queryFn: () => reminderApi.getReminders(activeConversation?.type === 'group' ? { groupId: activeConversation.id } : { partnerId: activeConversation.id }).then(r => r.data.data),
+    enabled: !!activeConversation
+  });
+  const remindersList = remindersData || [];
+
+  const { data: pollsData } = useQuery({
+    queryKey: ['polls', activeConversation?.id],
+    queryFn: () => pollApi.getPolls(activeConversation.id).then(r => r.data.data),
+    enabled: activeConversation?.type === 'group'
+  });
+  const pollsList = pollsData || [];
 
   const isPinned = activeConversation ? pinnedConversations.some(p => String(p.type).toUpperCase() === String(activeConversation.type).toUpperCase() && Number(p.entityId) === Number(activeConversation.id)) : false;
   const isMuted = activeConversation ? mutedConversations.some(m => String(m.type).toUpperCase() === String(activeConversation.type).toUpperCase() && Number(m.entityId) === Number(activeConversation.id)) : false;
@@ -172,6 +205,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
         const res = await messageApi.getMedia(params);
 
         // Tách gộp mảng ảnh (vì có thể 1 tin nhắn có nhiều ảnh dạng url1|url2)
+
         let extractedUrls = [];
         res.data.data.forEach(msg => {
           if (msg.content) {
@@ -202,7 +236,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
 
     fetchMedia();
     fetchFiles();
-  }, [activeConversation, messages.length]);
+  }, [activeConversation]);
 
   // Handle Search
   useEffect(() => {
@@ -493,6 +527,143 @@ const RightSidebar = ({ onClose, onImageClick }) => {
               )}
             </div>
 
+            {/* Ghi chú & Nhắc hẹn Accordion */}
+            <div className="border-b border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <button onClick={() => setIsNotesOpen(!isNotesOpen)} className="flex items-center gap-3 flex-1 text-left">
+                  <div className="w-8 h-8 rounded bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-600 dark:text-yellow-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  </div>
+                  <span className="font-semibold text-slate-800 dark:text-white text-[15px]">Ghi chú, nhắc hẹn</span>
+                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setIsCreateNoteModalOpen(true)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition" title="Tạo ghi chú">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  </button>
+                  <button onClick={() => setIsCreateReminderModalOpen(true)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition" title="Tạo nhắc hẹn">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </button>
+                  <svg onClick={() => setIsNotesOpen(!isNotesOpen)} xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 text-slate-400 cursor-pointer transition-transform ${isNotesOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </div>
+              </div>
+              
+              {isNotesOpen && (
+                <div className="px-4 pb-4">
+                  {(notesList.length > 0 || remindersList.length > 0) ? (
+                    <div className="flex flex-col gap-3">
+                      {remindersList.map((reminder) => (
+                        <div key={`r-${reminder.id}`} className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+                          <div className={`absolute top-0 left-0 w-1 h-full ${reminder.isDone ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <div className="pl-2">
+                            <p className="text-[13px] font-semibold text-slate-800 dark:text-white mb-1">{reminder.content}</p>
+                            <p className="text-[11px] text-slate-500">Tạo bởi: {reminder.creator?.fullName}</p>
+                            <p className="text-[11px] font-medium text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-1">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              {new Date(reminder.dueDate).toLocaleString()}
+                            </p>
+                            {!reminder.isDone && (
+                              <button 
+                                onClick={() => reminderApi.updateStatus(reminder.id, true).then(() => queryClient.invalidateQueries(['reminders']))}
+                                className="mt-2 text-[11px] bg-green-100 text-green-700 px-2 py-1 rounded font-medium hover:bg-green-200"
+                              >
+                                Đánh dấu hoàn thành
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {notesList.map((note) => (
+                        <div key={`n-${note.id}`} className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-100 dark:border-yellow-900/30">
+                          <p className="text-[13px] text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{note.content}</p>
+                          <p className="text-[11px] text-slate-500 mt-2">Tạo bởi: {note.creator?.fullName}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-slate-500 text-[13px]">
+                      Chưa có ghi chú, nhắc hẹn nào
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Bình chọn Accordion (Chỉ hiện trong nhóm) */}
+            {activeConversation.type === 'group' && (
+              <div className="border-b border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <button onClick={() => setIsPollsOpen(!isPollsOpen)} className="flex items-center gap-3 flex-1 text-left">
+                    <div className="w-8 h-8 rounded bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    </div>
+                    <span className="font-semibold text-slate-800 dark:text-white text-[15px]">Bình chọn</span>
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setIsCreatePollModalOpen(true)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition" title="Tạo bình chọn">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    </button>
+                    <svg onClick={() => setIsPollsOpen(!isPollsOpen)} xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 text-slate-400 cursor-pointer transition-transform ${isPollsOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </div>
+                </div>
+                
+                {isPollsOpen && (
+                  <div className="px-4 pb-4">
+                    {pollsList.length > 0 ? (
+                      <div className="flex flex-col gap-3">
+                        {pollsList.map((poll) => (
+                          <div key={poll.id} className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <h4 className="text-[14px] font-bold text-slate-800 dark:text-white mb-3">{poll.question}</h4>
+                            <div className="space-y-2">
+                              {poll.options.map(opt => {
+                                const totalVotes = poll.options.reduce((sum, o) => sum + o.votes.length, 0);
+                                const percentage = totalVotes > 0 ? Math.round((opt.votes.length / totalVotes) * 100) : 0;
+                                const isVotedByMe = opt.votes.some(v => v.userId === currentUser?.id);
+                                
+                                return (
+                                  <div key={opt.id} 
+                                    className="relative flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 cursor-pointer overflow-hidden group"
+                                    onClick={() => {
+                                      if (poll.isClosed) return;
+                                      // Toggle vote logic
+                                      const currentVotedIds = poll.options.filter(o => o.votes.some(v => v.userId === currentUser?.id)).map(o => o.id);
+                                      let newVotes = [...currentVotedIds];
+                                      if (isVotedByMe) {
+                                        newVotes = newVotes.filter(id => id !== opt.id);
+                                      } else {
+                                        if (!poll.allowMultiple) newVotes = [opt.id];
+                                        else newVotes.push(opt.id);
+                                      }
+                                      pollApi.votePoll(poll.id, newVotes).then(() => queryClient.invalidateQueries(['polls']));
+                                    }}
+                                  >
+                                    <div className="absolute top-0 left-0 h-full bg-indigo-100 dark:bg-indigo-900/30 transition-all duration-500" style={{ width: `${percentage}%` }}></div>
+                                    <div className="relative z-10 flex items-center gap-2">
+                                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isVotedByMe ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}>
+                                        {isVotedByMe && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+                                      </div>
+                                      <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300">{opt.content}</span>
+                                    </div>
+                                    <div className="relative z-10 text-[12px] text-slate-500">
+                                      {opt.votes.length} ({percentage}%)
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-3 text-right">Tạo bởi: {poll.creator?.fullName}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-slate-500 text-[13px]">
+                        Chưa có bình chọn nào
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Thiết lập khác */}
             <div>
               <button 
@@ -630,6 +801,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
         )}
       </div>
 
+      {/* Modals */}
       <GroupMembersModal 
         isOpen={isMembersModalOpen} 
         onClose={() => setIsMembersModalOpen(false)} 
@@ -647,6 +819,10 @@ const RightSidebar = ({ onClose, onImageClick }) => {
         isOpen={isCreateGroupModalOpen} 
         onClose={() => setIsCreateGroupModalOpen(false)} 
       />
+      <CreateNoteModal isOpen={isCreateNoteModalOpen} onClose={() => setIsCreateNoteModalOpen(false)} />
+      <CreateReminderModal isOpen={isCreateReminderModalOpen} onClose={() => setIsCreateReminderModalOpen(false)} />
+      <CreatePollModal isOpen={isCreatePollModalOpen} onClose={() => setIsCreatePollModalOpen(false)} />
+      
       {lightboxUrl && (
         <ImageViewerModal 
           previewData={{ url: lightboxUrl, isOwn: false }} 
