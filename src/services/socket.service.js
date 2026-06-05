@@ -350,6 +350,11 @@ const socketService = {
     // ==========================================
     // SỰ KIỆN WEB RTC CALL
     // ==========================================
+    socket.on('group_call_started', (data) => {
+      useCallStore.getState().setIncomingGroupCall(data);
+      playNotificationSound();
+    });
+
     socket.on('call_request', ({ callerId, callerInfo, callType }) => {
       useCallStore.getState().receiveCall(callerId, callerInfo, callType);
     });

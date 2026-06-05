@@ -2,27 +2,27 @@ import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-quer
 import { format, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import EmojiPicker from 'emoji-picker-react';
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import groupApi from '../../api/group.api';
 import messageApi from '../../api/message.api';
 import uploadApi from '../../api/upload.api';
 import socketService from '../../services/socket.service';
 import useAuthStore from '../../stores/auth.store';
-import useChatStore from '../../stores/chat.store';
 import useCallStore from '../../stores/call.store';
+import useChatStore from '../../stores/chat.store';
 import useThemeStore from '../../stores/theme.store'; // For emoji-picker-react theme
 import { useUIStore } from '../../stores/ui.store';
 import WaveformPlayer from '../common/WaveformPlayer';
 import AudioRecorder from './AudioRecorder';
+import ChatNoteWidget from './ChatNoteWidget';
+import ChatPollWidget from './ChatPollWidget';
+import ChatReminderWidget from './ChatReminderWidget';
 import GroupMembersModal from './GroupMembersModal';
 import ImageViewerModal from './ImageViewerModal';
 import MessageReadersModal from './MessageReadersModal';
 import ReactionListModal from './ReactionListModal';
 import ShareMessageModal from './ShareMessageModal';
 import UserProfileModal from './UserProfileModal';
-import ChatPollWidget from './ChatPollWidget';
-import ChatNoteWidget from './ChatNoteWidget';
-import ChatReminderWidget from './ChatReminderWidget';
 
 const STICKER_CATEGORIES = [
   { label: 'Gần đây', query: '' },
@@ -45,7 +45,7 @@ const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
 
 const renderTextWithLinks = (text, onUserClick, groupMembers = []) => {
   if (!text) return null;
-  
+
   // Regex để tìm các URL hoặc @username
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/i;
   const mentionRegex = /(@[a-zA-Z0-9_]+)/i;
@@ -81,8 +81,8 @@ const renderTextWithLinks = (text, onUserClick, groupMembers = []) => {
 
       if (matchedUser && onUserClick) {
         return (
-          <span 
-            key={i} 
+          <span
+            key={i}
             className="font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1 rounded inline-block cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
             onClick={(e) => {
               e.stopPropagation();
@@ -170,13 +170,13 @@ const MessageItem = ({
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(countdownIntervalRef.current);
-          
+
           // Gọi callback và xử lý lỗi nếu có
           Promise.resolve(onDeleteForMe(message.id)).catch(() => {
             setIsDeleting(false);
             setCountdown(5);
           });
-          
+
           return 0;
         }
         return prev - 1;
@@ -408,7 +408,7 @@ const MessageItem = ({
 
       {/* Tên người gửi (chỉ hiện với group chat, không phải mình) */}
       {!isOwn && message.groupId && isFirstInGroup && (
-        <p 
+        <p
           className="text-xs text-slate-500 dark:text-slate-400 mb-1 ml-1 inline-block cursor-pointer hover:underline hover:text-indigo-500 transition-colors"
           onClick={() => onUserClick && onUserClick(message.senderId)}
         >
@@ -632,6 +632,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const pinnedMessages = useChatStore((s) => s.pinnedMessages[conversationKey] || EMPTY_ARRAY);
   const setPinnedMessages = useChatStore((s) => s.setPinnedMessages);
   const initiateCall = useCallStore((s) => s.initiateCall);
+  const joinZegoCall = useCallStore((s) => s.joinZegoCall);
 
   const currentUser = useAuthStore((s) => s.user);
   const [inputText, setInputText] = useState('');
@@ -661,7 +662,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState('');
-  
+
   // Tag (Mention) state
   const [mentionQuery, setMentionQuery] = useState(null);
   const [mentionIndex, setMentionIndex] = useState(0);
@@ -685,7 +686,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
   const groupMembers = useMemo(() => {
     if (!groupMembersData) return [];
-    
+
     // Flatten group members tree
     const flatten = (nodes) => {
       let result = [];
@@ -697,7 +698,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       });
       return result;
     };
-    
+
     const flatUsers = flatten(groupMembersData);
     // Xoá trùng lặp nếu có
     return Array.from(new Map(flatUsers.map(item => [item.id, item])).values());
@@ -705,11 +706,11 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
   const mentionCandidates = useMemo(() => {
     if (mentionQuery === null || groupMembers.length === 0) return [];
-    
+
     const q = mentionQuery.toLowerCase();
-    return groupMembers.filter(u => 
+    return groupMembers.filter(u =>
       u.id !== currentUser?.id &&
-      ((u.fullName || '').toLowerCase().includes(q) || 
+      ((u.fullName || '').toLowerCase().includes(q) ||
        (u.username || '').toLowerCase().includes(q))
     ).slice(0, 10);
   }, [groupMembers, mentionQuery, currentUser?.id]);
@@ -1082,14 +1083,14 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
     const cursorPosition = textareaRef.current.selectionStart;
     const textBeforeCursor = inputText.slice(0, cursorPosition);
     const textAfterCursor = inputText.slice(cursorPosition);
-    
+
     const words = textBeforeCursor.split(/\s/);
     const currentWord = words[words.length - 1];
-    
+
     if (currentWord.startsWith('@')) {
       const newTextBeforeCursor = textBeforeCursor.slice(0, -currentWord.length) + `@${user.username} `;
       setInputText(newTextBeforeCursor + textAfterCursor);
-      
+
       setTimeout(() => {
         if (textareaRef.current) {
           textareaRef.current.focus();
@@ -1097,7 +1098,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
         }
       }, 0);
     }
-    
+
     setMentionQuery(null);
   };
 
@@ -1367,7 +1368,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
         <div className="flex items-center gap-3">
           {/* Avatar Area */}
-          <div 
+          <div
             className={`relative group ${canEditGroupInfo ? 'cursor-pointer' : (activeConversation.type === 'direct' ? 'cursor-pointer hover:opacity-80 transition-opacity' : '')}`}
             onClick={() => {
               if (activeConversation.type === 'direct') setIsUserProfileModalOpen(true);
@@ -1414,7 +1415,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                  className="w-full text-sm font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 border border-indigo-500 rounded px-2 py-0.5 outline-none focus:ring-2 focus:ring-indigo-500"
                />
             ) : (
-              <p 
+              <p
                 className={`font-semibold text-slate-900 dark:text-white text-sm truncate ${canEditGroupInfo ? 'cursor-pointer hover:text-indigo-600 transition-colors' : (activeConversation.type === 'direct' ? 'cursor-pointer hover:text-indigo-600 transition-colors' : '')}`}
                 onClick={() => {
                   if (activeConversation.type === 'direct') setIsUserProfileModalOpen(true);
@@ -1429,7 +1430,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
               </p>
             )}
 
-            <p 
+            <p
                className={`text-xs font-medium ${activeConversation.type === 'group' ? 'text-slate-500 dark:text-slate-400 cursor-pointer hover:underline inline-block' : (onlineUsers[activeConversation.id] ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500')} ${activeConversation.type === 'direct' ? 'cursor-pointer hover:opacity-80 transition-opacity inline-block' : ''}`}
                onClick={() => {
                  if (activeConversation.type === 'group') setIsGroupMembersModalOpen(true);
@@ -1438,7 +1439,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                title={activeConversation.type === 'group' ? "Xem thành viên nhóm" : "Xem trang cá nhân"}
             >
               {activeConversation.type === 'group'
-                ? `Cộng đồng • ${activeConversation.memberCount || 0} thành viên`
+                ? `${activeConversation.memberCount || 0} thành viên`
                 : (onlineUsers[activeConversation.id]
                     ? 'Đang hoạt động'
                     : (userLastSeen[activeConversation.id]
@@ -1472,6 +1473,35 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
                 </svg>
               </button>
             </>
+          )}
+
+          {/* Nút Gọi Nhóm (Chỉ hiện khi trong Group) */}
+          {activeConversation.type === 'group' && (
+            <button
+              onClick={() => {
+                joinZegoCall(activeConversation.id);
+                // Broadcast to others
+                socketService.getSocket()?.emit('group_call_started', {
+                  groupId: activeConversation.id,
+                  groupName: activeConversation.name,
+                  callerName: currentUser.fullName
+                });
+
+                // Gửi một tin nhắn hệ thống báo hiệu có cuộc gọi nhóm
+                socketService.getSocket()?.emit('sendGroupMessage', {
+                  groupId: activeConversation.id,
+                  content: 'Đã bắt đầu cuộc gọi nhóm',
+                  type: 'SYSTEM'
+                });
+              }}
+              title="Tham gia Gọi Nhóm"
+              className="px-3 py-1.5 flex-shrink-0 rounded-lg flex items-center justify-center gap-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50 transition font-medium text-xs sm:text-sm"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span className="hidden sm:inline">Gọi nhóm</span>
+            </button>
           )}
 
           {/* Nút tìm kiếm */}

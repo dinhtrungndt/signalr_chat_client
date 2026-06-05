@@ -5,6 +5,8 @@ import AppRouter from './routers/AppRouter';
 import useThemeStore from './stores/theme.store';
 import GlobalUI from './components/common/GlobalUI';
 import CallModal from './components/call/CallModal';
+import ZegoGroupCallModal from './components/call/ZegoGroupCallModal';
+import IncomingGroupCallToast from './components/call/IncomingGroupCallToast';
 
 // Cấu hình React Query: cache dữ liệu thông minh
 export const queryClient = new QueryClient({
@@ -30,6 +32,8 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <GlobalUI />
         <CallModal />
+        <ZegoGroupCallModal />
+        <IncomingGroupCallToast />
         <AppRouter />
       </QueryClientProvider>
     </HelmetProvider>

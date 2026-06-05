@@ -26,7 +26,17 @@ const useCallStore = create((set, get) => ({
   isMuted: false,
   isVideoOff: false,
 
+  // ZegoCloud state
+  zegoRoomId: null,
+  incomingGroupCall: null, // { groupId, groupName, callerName }
+
   setCallState: (state) => set({ callState: state }),
+  
+  joinZegoCall: (roomId) => set({ zegoRoomId: roomId, incomingGroupCall: null }),
+  leaveZegoCall: () => set({ zegoRoomId: null }),
+  
+  setIncomingGroupCall: (data) => set({ incomingGroupCall: data }),
+  clearIncomingGroupCall: () => set({ incomingGroupCall: null }),
   
   initiateCall: async (receiverId, remoteUser, callType) => {
     try {
