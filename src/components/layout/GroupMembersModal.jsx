@@ -41,6 +41,8 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
     return () => window.removeEventListener('group_members_updated', handleUpdate);
   }, [groupId, queryClient]);
 
+  const [searchQueryMembers, setSearchQueryMembers] = useState('');
+
   const members = React.useMemo(() => {
     if (!membersData) return [];
     // Hàm đệ quy làm phẳng cây
@@ -56,15 +58,30 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
     };
     
     const flattened = flatten(membersData);
+    let filtered = flattened;
+    if (searchQueryMembers.trim()) {
+      const q = searchQueryMembers.toLowerCase();
+      filtered = flattened.filter(m => 
+        (m.user?.fullName || '').toLowerCase().includes(q) ||
+        (m.user?.username || '').toLowerCase().includes(q)
+      );
+    }
     // Sắp xếp: Admin lên đầu, sau đó xếp theo tên
-    return flattened.sort((a, b) => {
+    return filtered.sort((a, b) => {
       if (a.role === 'ADMIN' && b.role !== 'ADMIN') return -1;
       if (a.role !== 'ADMIN' && b.role === 'ADMIN') return 1;
       return (a.user?.fullName || '').localeCompare(b.user?.fullName || '');
     });
-  }, [membersData]);
+  }, [membersData, searchQueryMembers]);
 
-  const myMemberInfo = members.find((m) => m.userId === currentUser?.id);
+  const myMemberInfo = members.find((m) => m.userId === currentUser?.id) || 
+    (membersData ? (function findMe(nodes){
+       for(const n of nodes){
+         if(n.userId===currentUser?.id)return n;
+         if(n.children?.length) {const res=findMe(n.children); if(res) return res;}
+       }
+       return null;
+    })(membersData) : null);
   const isAdmin = myMemberInfo?.role === 'ADMIN';
 
   // Thêm thành viên
@@ -120,7 +137,7 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Quản lý nhóm</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{members.length} người tham gia</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{membersData ? (function count(nodes){ return nodes.reduce((a,c)=>a+1+count(c.children||[]),0) })(membersData) : 0} người tham gia</p>
           </div>
           <button onClick={onClose} className="p-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-700 transition">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
@@ -147,14 +164,26 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
 
         <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
           {activeTab === 'members' && (
-            <>
+            <div className="flex flex-col h-full">
+              <div className="relative mb-2 px-1 pt-1">
+                <input
+                  type="text"
+                  placeholder="Tìm thành viên..."
+                  value={searchQueryMembers}
+                  onChange={(e) => setSearchQueryMembers(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition text-slate-900 dark:text-white"
+                />
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-slate-400 absolute left-4 top-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
               {isLoading ? (
             <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400 flex flex-col items-center gap-3">
               <svg className="animate-spin w-6 h-6 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
               Đang tải danh sách...
             </div>
           ) : members.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">Không có thành viên nào</div>
+            <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">Không tìm thấy thành viên nào</div>
           ) : (
             <div className="space-y-1">
               {members.map((m) => {
@@ -234,7 +263,7 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
               })}
             </div>
           )}
-            </>
+            </div>
           )}
 
           {activeTab === 'add' && (

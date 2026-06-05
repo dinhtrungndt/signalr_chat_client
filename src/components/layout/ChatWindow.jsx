@@ -3,6 +3,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import EmojiPicker from 'emoji-picker-react';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import groupApi from '../../api/group.api';
 import messageApi from '../../api/message.api';
 import uploadApi from '../../api/upload.api';
 import socketService from '../../services/socket.service';
@@ -611,12 +612,15 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   const [selectedMessages, setSelectedMessages] = useState(new Set());
   const [isDraggingSelection, setIsDraggingSelection] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState('');
 
   const messagesEndRef = useRef(null);
   const typingTimerRef = useRef(null);
   const batchDeleteIntervalRef = useRef(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
+  const avatarInputRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const queryClient = useQueryClient();
 
@@ -670,7 +674,49 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
     }
   };
 
+  const canEditGroupInfo = activeConversation?.type === 'group' && ((activeConversation.role === 'ADMIN' || activeConversation.role === 'DEPUTY') || activeConversation.canChangeGroupInfo);
 
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      const res = await groupApi.updateGroupAvatar(activeConversation.id, formData);
+      const updatedGroup = res.data.data;
+      useChatStore.getState().setActiveConversation({
+        ...activeConversation,
+        avatar: updatedGroup.avatar
+      });
+      queryClient.invalidateQueries(['my-groups']);
+      useUIStore.getState().showToast('Cập nhật ảnh đại diện thành công', 'success');
+    } catch (err) {
+      useUIStore.getState().showToast('Có lỗi khi cập nhật ảnh đại diện', 'error');
+    } finally {
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleSaveName = async () => {
+    if (!editName.trim() || editName.trim() === activeConversation.name) {
+      setIsEditingName(false);
+      return;
+    }
+    try {
+      const res = await groupApi.updateGroupName(activeConversation.id, editName.trim());
+      const updatedGroup = res.data.data;
+      useChatStore.getState().setActiveConversation({
+        ...activeConversation,
+        name: updatedGroup.name
+      });
+      queryClient.invalidateQueries(['my-groups']);
+      useUIStore.getState().showToast('Cập nhật tên nhóm thành công', 'success');
+      setIsEditingName(false);
+    } catch (err) {
+      useUIStore.getState().showToast('Có lỗi khi cập nhật tên nhóm', 'error');
+    }
+  };
 
   useEffect(() => {
     if (emojiTab !== 'STICKER' || !showEmojiPicker) return;
@@ -1169,28 +1215,78 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
           </svg>
         </button>
 
-        <div
-          className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={() => {
-            if (activeConversation.type === 'direct') {
-              setIsUserProfileModalOpen(true);
-            } else {
-              setIsGroupMembersModalOpen(true);
-            }
-          }}
-          title={activeConversation.type === 'direct' ? "Xem trang cá nhân" : "Xem thành viên nhóm"}
-        >
-          {activeConversation.avatar ? (
-            <img src={`${process.env.REACT_APP_SOCKET_URL}${activeConversation.avatar}`} alt="Avatar" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
-          ) : (
-            <div className="w-9 h-9 flex-shrink-0 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm">
-              {activeConversation.name?.charAt(0)?.toUpperCase() || '?'}
-            </div>
-          )}
+        <div className="flex items-center gap-3">
+          {/* Avatar Area */}
+          <div 
+            className={`relative group ${canEditGroupInfo ? 'cursor-pointer' : (activeConversation.type === 'direct' ? 'cursor-pointer hover:opacity-80 transition-opacity' : '')}`}
+            onClick={() => {
+              if (activeConversation.type === 'direct') setIsUserProfileModalOpen(true);
+              else if (canEditGroupInfo) avatarInputRef.current?.click();
+            }}
+            title={activeConversation.type === 'direct' ? "Xem trang cá nhân" : (canEditGroupInfo ? "Thay đổi ảnh đại diện" : "")}
+          >
+            {activeConversation.avatar ? (
+              <img src={`${process.env.REACT_APP_SOCKET_URL}${activeConversation.avatar}`} alt="Avatar" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-9 h-9 flex-shrink-0 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm">
+                {activeConversation.name?.charAt(0)?.toUpperCase() || '?'}
+              </div>
+            )}
+            {/* Hover overlay for changing avatar */}
+            {canEditGroupInfo && (
+              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+            {canEditGroupInfo && (
+               <input
+                 type="file"
+                 ref={avatarInputRef}
+                 className="hidden"
+                 accept="image/*"
+                 onChange={handleAvatarChange}
+               />
+            )}
+          </div>
 
+          {/* Name and Info Area */}
           <div className="min-w-0 flex-1 pr-4">
-            <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">{activeConversation.name}</p>
-            <p className={`text-xs font-medium ${activeConversation.type === 'group' ? 'text-slate-500 dark:text-slate-400' : (onlineUsers[activeConversation.id] ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500')}`}>
+            {activeConversation.type === 'group' && isEditingName ? (
+               <input
+                 type="text"
+                 autoFocus
+                 value={editName}
+                 onChange={(e) => setEditName(e.target.value)}
+                 onBlur={handleSaveName}
+                 onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                 className="w-full text-sm font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 border border-indigo-500 rounded px-2 py-0.5 outline-none focus:ring-2 focus:ring-indigo-500"
+               />
+            ) : (
+              <p 
+                className={`font-semibold text-slate-900 dark:text-white text-sm truncate ${canEditGroupInfo ? 'cursor-pointer hover:text-indigo-600 transition-colors' : (activeConversation.type === 'direct' ? 'cursor-pointer hover:text-indigo-600 transition-colors' : '')}`}
+                onClick={() => {
+                  if (activeConversation.type === 'direct') setIsUserProfileModalOpen(true);
+                  else if (canEditGroupInfo) {
+                    setEditName(activeConversation.name);
+                    setIsEditingName(true);
+                  }
+                }}
+                title={activeConversation.type === 'direct' ? "Xem trang cá nhân" : (canEditGroupInfo ? "Nhấn để đổi tên" : "")}
+              >
+                {activeConversation.name}
+              </p>
+            )}
+
+            <p 
+               className={`text-xs font-medium ${activeConversation.type === 'group' ? 'text-slate-500 dark:text-slate-400 cursor-pointer hover:underline inline-block' : (onlineUsers[activeConversation.id] ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500')} ${activeConversation.type === 'direct' ? 'cursor-pointer hover:opacity-80 transition-opacity inline-block' : ''}`}
+               onClick={() => {
+                 if (activeConversation.type === 'group') setIsGroupMembersModalOpen(true);
+                 else setIsUserProfileModalOpen(true);
+               }}
+               title={activeConversation.type === 'group' ? "Xem thành viên nhóm" : "Xem trang cá nhân"}
+            >
               {activeConversation.type === 'group'
                 ? `Cộng đồng • ${activeConversation.memberCount || 0} thành viên`
                 : (onlineUsers[activeConversation.id]
