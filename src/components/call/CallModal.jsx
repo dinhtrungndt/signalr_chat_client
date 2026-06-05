@@ -13,6 +13,34 @@ const CallModal = () => {
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const ringtoneRef = useRef(null);
+
+  useEffect(() => {
+    // Play ringtone when ringing
+    if (callState === 'RINGING') {
+      const audioUrl = isCaller 
+        ? 'https://assets.mixkit.co/active_storage/sfx/2865/2865-preview.mp3' // Outgoing ringing
+        : 'https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3'; // Incoming ringtone
+      
+      const audio = new Audio(audioUrl);
+      audio.loop = true;
+      audio.play().catch(e => console.log('Audio autoplay blocked', e));
+      ringtoneRef.current = audio;
+    } else {
+      if (ringtoneRef.current) {
+        ringtoneRef.current.pause();
+        ringtoneRef.current.currentTime = 0;
+        ringtoneRef.current = null;
+      }
+    }
+
+    return () => {
+      if (ringtoneRef.current) {
+        ringtoneRef.current.pause();
+        ringtoneRef.current = null;
+      }
+    };
+  }, [callState, isCaller]);
 
   useEffect(() => {
     // Attach refs to rtcManager
