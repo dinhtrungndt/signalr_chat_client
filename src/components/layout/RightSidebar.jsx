@@ -92,7 +92,8 @@ const RightSidebar = ({ onClose, onImageClick }) => {
       }
       queryClient.invalidateQueries(['pinned-conversations']);
     } catch (error) {
-      useUIStore.getState().showAlert('Có lỗi xảy ra khi cập nhật ghim');
+      const msg = error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật ghim';
+      useUIStore.getState().showToast(msg, 'error');
     }
   };
 
@@ -106,7 +107,8 @@ const RightSidebar = ({ onClose, onImageClick }) => {
       }
       queryClient.invalidateQueries(['muted-conversations']);
     } catch (error) {
-      useUIStore.getState().showAlert('Có lỗi xảy ra khi cập nhật thông báo');
+      const msg = error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật thông báo';
+      useUIStore.getState().showToast(msg, 'error');
     }
   };
 

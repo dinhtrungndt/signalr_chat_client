@@ -4,21 +4,24 @@ import groupApi from '../../api/group.api';
 import useAuthStore from '../../stores/auth.store';
 import { useUIStore } from '../../stores/ui.store';
 import { useQueryClient } from '@tanstack/react-query';
+import useChatStore from '../../stores/chat.store';
 
 const GroupSettingsModal = ({ isOpen, onClose, groupId, isReadOnly, isAdmin }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
 
+  const activeConversation = useChatStore((s) => s.activeConversation);
+
   // State cục bộ để mock các thiết lập
-  const [canChangeName, setCanChangeName] = useState(true);
-  const [canPin, setCanPin] = useState(true);
-  const [canNote, setCanNote] = useState(true);
-  const [canPoll, setCanPoll] = useState(true);
+  const [canChangeName, setCanChangeName] = useState(activeConversation?.canChangeGroupInfo ?? true);
+  const [canPin, setCanPin] = useState(activeConversation?.canPinMessages ?? true);
+  const [canNote, setCanNote] = useState(activeConversation?.canCreateNotes ?? true);
+  const [canPoll, setCanPoll] = useState(activeConversation?.canCreatePolls ?? true);
   const [canSendMsg, setCanSendMsg] = useState(!isReadOnly);
   
-  const [approvalMode, setApprovalMode] = useState(false);
-  const [highlightAdmin, setHighlightAdmin] = useState(true);
-  const [readHistory, setReadHistory] = useState(true);
+  const [approvalMode, setApprovalMode] = useState(activeConversation?.requireApproval ?? false);
+  const [highlightAdmin, setHighlightAdmin] = useState(activeConversation?.highlightAdminMessages ?? true);
+  const [readHistory, setReadHistory] = useState(activeConversation?.joinerCanReadHistory ?? true);
 
   if (!isOpen) return null;
 
@@ -26,11 +29,31 @@ const GroupSettingsModal = ({ isOpen, onClose, groupId, isReadOnly, isAdmin }) =
     if (!isAdmin) return;
     try {
       setIsSubmitting(true);
-      await groupApi.toggleReadOnly(groupId);
+      await groupApi.toggleReadOnly(groupId, canSendMsg); // canSendMsg is current state, so passing true means isReadOnly = true
       setCanSendMsg(!canSendMsg); // Đảo state
       queryClient.invalidateQueries(['my-groups']);
     } catch (err) {
-      useUIStore.getState().showAlert('Có lỗi khi thay đổi quyền gửi tin nhắn');
+      useUIStore.getState().showToast('Có lỗi khi thay đổi quyền gửi tin nhắn', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateSetting = async (field, currentValue, setter) => {
+    if (!isAdmin || isSubmitting) return;
+    const newValue = !currentValue;
+    
+    // Tạm thời update UI cho mượt (Optimistic Update)
+    setter(newValue);
+    
+    try {
+      setIsSubmitting(true);
+      await groupApi.updateSettings(groupId, { [field]: newValue });
+      queryClient.invalidateQueries(['my-groups']);
+    } catch (err) {
+      // Revert UI nếu lỗi
+      setter(currentValue);
+      useUIStore.getState().showToast('Có lỗi xảy ra khi cập nhật cài đặt', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -69,26 +92,26 @@ const GroupSettingsModal = ({ isOpen, onClose, groupId, isReadOnly, isAdmin }) =
               <CheckboxRow 
                 label="Thay đổi tên & ảnh đại diện của nhóm" 
                 checked={canChangeName} 
-                onChange={() => isAdmin && setCanChangeName(!canChangeName)} 
-                disabled={!isAdmin}
+                onChange={() => handleUpdateSetting('canChangeGroupInfo', canChangeName, setCanChangeName)} 
+                disabled={!isAdmin || isSubmitting}
               />
               <CheckboxRow 
                 label="Ghim tin nhắn, ghi chú, bình chọn lên đầu hội thoại" 
                 checked={canPin} 
-                onChange={() => isAdmin && setCanPin(!canPin)} 
-                disabled={!isAdmin}
+                onChange={() => handleUpdateSetting('canPinMessages', canPin, setCanPin)} 
+                disabled={!isAdmin || isSubmitting}
               />
               <CheckboxRow 
                 label="Tạo mới ghi chú, nhắc hẹn" 
                 checked={canNote} 
-                onChange={() => isAdmin && setCanNote(!canNote)} 
-                disabled={!isAdmin}
+                onChange={() => handleUpdateSetting('canCreateNotes', canNote, setCanNote)} 
+                disabled={!isAdmin || isSubmitting}
               />
               <CheckboxRow 
                 label="Tạo mới bình chọn" 
                 checked={canPoll} 
-                onChange={() => isAdmin && setCanPoll(!canPoll)} 
-                disabled={!isAdmin}
+                onChange={() => handleUpdateSetting('canCreatePolls', canPoll, setCanPoll)} 
+                disabled={!isAdmin || isSubmitting}
               />
               <CheckboxRow 
                 label="Gửi tin nhắn" 
@@ -104,8 +127,8 @@ const GroupSettingsModal = ({ isOpen, onClose, groupId, isReadOnly, isAdmin }) =
             <ToggleRow 
               label="Chế độ phê duyệt thành viên mới" 
               checked={approvalMode} 
-              onChange={() => isAdmin && setApprovalMode(!approvalMode)} 
-              disabled={!isAdmin}
+              onChange={() => handleUpdateSetting('requireApproval', approvalMode, setApprovalMode)} 
+              disabled={!isAdmin || isSubmitting}
             />
           </div>
 
@@ -113,8 +136,8 @@ const GroupSettingsModal = ({ isOpen, onClose, groupId, isReadOnly, isAdmin }) =
             <ToggleRow 
               label="Đánh dấu tin nhắn từ trưởng/phó nhóm" 
               checked={highlightAdmin} 
-              onChange={() => isAdmin && setHighlightAdmin(!highlightAdmin)} 
-              disabled={!isAdmin}
+              onChange={() => handleUpdateSetting('highlightAdminMessages', highlightAdmin, setHighlightAdmin)} 
+              disabled={!isAdmin || isSubmitting}
             />
           </div>
 
@@ -122,8 +145,8 @@ const GroupSettingsModal = ({ isOpen, onClose, groupId, isReadOnly, isAdmin }) =
             <ToggleRow 
               label="Cho phép thành viên mới đọc tin nhắn gần nhất" 
               checked={readHistory} 
-              onChange={() => isAdmin && setReadHistory(!readHistory)} 
-              disabled={!isAdmin}
+              onChange={() => handleUpdateSetting('joinerCanReadHistory', readHistory, setReadHistory)} 
+              disabled={!isAdmin || isSubmitting}
             />
           </div>
 
