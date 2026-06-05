@@ -585,7 +585,20 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                 searchResults.length > 0 ? (
                   <div className="flex flex-col gap-3">
                     {searchResults.map((msg) => (
-                      <div key={msg.id} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800">
+                      <div 
+                        key={msg.id} 
+                        className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800"
+                        onClick={() => {
+                          const el = document.getElementById(`msg-${msg.id}`);
+                          if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            el.classList.add('bg-amber-100', 'dark:bg-amber-900/30', 'transition-colors', 'duration-1000');
+                            setTimeout(() => el.classList.remove('bg-amber-100', 'dark:bg-amber-900/30'), 1500);
+                          } else {
+                            useUIStore.getState().showToast('Tin nhắn quá cũ, vui lòng kéo lên tải thêm tin nhắn trước!', 'warning');
+                          }
+                        }}
+                      >
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-semibold text-[13px] text-slate-800 dark:text-white">{msg.sender?.fullName}</span>
                           <span className="text-[11px] text-slate-500">
