@@ -141,6 +141,18 @@ const socketService = {
       window.dispatchEvent(new Event('group_updated'));
     });
 
+    socket.on('group_settings_updated', (data) => {
+      const { groupId, settings } = data;
+      const activeConversation = useChatStore.getState().activeConversation;
+      if (activeConversation?.type === 'group' && activeConversation?.id === groupId) {
+        useChatStore.getState().setActiveConversation({
+          ...activeConversation,
+          ...settings
+        });
+      }
+      window.dispatchEvent(new Event('group_updated'));
+    });
+
     socket.on('group_member_updated', (data) => {
       const { groupId, userId, role } = data;
       const currentUser = useAuthStore.getState().user;
@@ -154,6 +166,20 @@ const socketService = {
         }
       }
       window.dispatchEvent(new CustomEvent('group_members_updated', { detail: { groupId } }));
+      window.dispatchEvent(new Event('group_updated'));
+    });
+
+    socket.on('group_info_updated', (data) => {
+      const { groupId, group } = data;
+      const activeConversation = useChatStore.getState().activeConversation;
+      if (activeConversation?.type === 'group' && activeConversation?.id === groupId) {
+        useChatStore.getState().setActiveConversation({
+          ...activeConversation,
+          name: group.name,
+          avatar: group.avatar,
+          canChangeGroupInfo: group.canChangeGroupInfo
+        });
+      }
       window.dispatchEvent(new Event('group_updated'));
     });
 

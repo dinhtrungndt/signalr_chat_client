@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import groupApi from '../../api/group.api';
 import messageApi from '../../api/message.api';
@@ -51,8 +51,6 @@ const RightSidebar = ({ onClose, onImageClick }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
-
-
   // Accordion state cho Tab Info
   const [isMediaOpen, setIsMediaOpen] = useState(true);
   const [isFileOpen, setIsFileOpen] = useState(false);
@@ -62,6 +60,11 @@ const RightSidebar = ({ onClose, onImageClick }) => {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+
+  // Edit group state
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState('');
+  const avatarInputRef = useRef(null);
 
   const queryClient = useQueryClient();
 
@@ -81,6 +84,51 @@ const RightSidebar = ({ onClose, onImageClick }) => {
 
   const isPinned = activeConversation ? pinnedConversations.some(p => String(p.type).toUpperCase() === String(activeConversation.type).toUpperCase() && Number(p.entityId) === Number(activeConversation.id)) : false;
   const isMuted = activeConversation ? mutedConversations.some(m => String(m.type).toUpperCase() === String(activeConversation.type).toUpperCase() && Number(m.entityId) === Number(activeConversation.id)) : false;
+
+  const isAdmin = activeConversation?.type === 'group' && (activeConversation.role === 'ADMIN' || activeConversation.role === 'DEPUTY');
+  const canEditGroupInfo = activeConversation?.type === 'group' && (isAdmin || activeConversation.canChangeGroupInfo);
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      const res = await groupApi.updateGroupAvatar(activeConversation.id, formData);
+      const updatedGroup = res.data.data;
+      useChatStore.getState().setActiveConversation({
+        ...activeConversation,
+        avatar: updatedGroup.avatar
+      });
+      queryClient.invalidateQueries(['my-groups']);
+      useUIStore.getState().showToast('Cập nhật ảnh đại diện thành công', 'success');
+    } catch (err) {
+      useUIStore.getState().showToast('Có lỗi khi cập nhật ảnh đại diện', 'error');
+    } finally {
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleSaveName = async () => {
+    if (!editName.trim() || editName.trim() === activeConversation.name) {
+      setIsEditingName(false);
+      return;
+    }
+    try {
+      const res = await groupApi.updateGroupName(activeConversation.id, editName.trim());
+      const updatedGroup = res.data.data;
+      useChatStore.getState().setActiveConversation({
+        ...activeConversation,
+        name: updatedGroup.name
+      });
+      queryClient.invalidateQueries(['my-groups']);
+      useUIStore.getState().showToast('Cập nhật tên nhóm thành công', 'success');
+      setIsEditingName(false);
+    } catch (err) {
+      useUIStore.getState().showToast('Có lỗi khi cập nhật tên nhóm', 'error');
+    }
+  };
 
   const handleTogglePin = async () => {
     if (!activeConversation) return;
@@ -216,8 +264,6 @@ const RightSidebar = ({ onClose, onImageClick }) => {
 
   if (!activeConversation) return null;
 
-  const isAdmin = activeConversation.type === 'group' && activeConversation.role === 'ADMIN';
-
   return (
     <div className="flex flex-col w-full h-full bg-slate-50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700">
       {/* Header */}
@@ -235,16 +281,63 @@ const RightSidebar = ({ onClose, onImageClick }) => {
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {/* Avatar & Name */}
         <div className="flex flex-col items-center justify-center p-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-          {activeConversation.avatar ? (
-            <img src={`${process.env.REACT_APP_SOCKET_URL}${activeConversation.avatar}`} alt="Avatar" className="w-20 h-20 rounded-full object-cover shadow-md mb-3" />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-3xl font-bold shadow-md mb-3">
-              {activeConversation.type === 'group'
-                ? activeConversation.name.charAt(0).toUpperCase()
-                : activeConversation.name.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white">{activeConversation.name}</h3>
+          
+          {/* AVATAR WITH UPLOAD */}
+          <div className="relative group/avatar cursor-pointer" onClick={() => canEditGroupInfo && avatarInputRef.current?.click()}>
+            {activeConversation.avatar ? (
+              <img src={`${process.env.REACT_APP_SOCKET_URL}${activeConversation.avatar}`} alt="Avatar" className="w-20 h-20 rounded-full object-cover shadow-md mb-3" />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-3xl font-bold shadow-md mb-3">
+                {activeConversation.name?.charAt(0).toUpperCase()}
+              </div>
+            )}
+            
+            {canEditGroupInfo && (
+              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              </div>
+            )}
+            <input type="file" ref={avatarInputRef} hidden accept="image/*" onChange={handleAvatarChange} />
+          </div>
+
+          {/* NAME WITH EDITING */}
+          <div className="flex items-center gap-2 group/name mt-2">
+            {isEditingName ? (
+              <input 
+                type="text" 
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onBlur={handleSaveName}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                autoFocus
+                className="text-lg font-bold text-slate-800 dark:text-white bg-transparent border-b-2 border-indigo-500 outline-none px-1 text-center w-full min-w-[150px]"
+              />
+            ) : (
+              <h3 
+                className={`text-lg font-bold text-slate-800 dark:text-white ${canEditGroupInfo ? 'cursor-pointer hover:underline' : ''}`}
+                onClick={() => {
+                  if (canEditGroupInfo) {
+                    setEditName(activeConversation.name);
+                    setIsEditingName(true);
+                  }
+                }}
+              >
+                {activeConversation.name}
+              </h3>
+            )}
+            
+            {canEditGroupInfo && !isEditingName && (
+              <button 
+                onClick={() => {
+                  setEditName(activeConversation.name);
+                  setIsEditingName(true);
+                }}
+                className="opacity-0 group-hover/name:opacity-100 text-slate-400 hover:text-indigo-500 transition-opacity"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+              </button>
+            )}
+          </div>
 
           <div className="flex items-start justify-center gap-2 sm:gap-4 mt-6">
             {activeConversation.type === 'direct' ? (
@@ -300,194 +393,251 @@ const RightSidebar = ({ onClose, onImageClick }) => {
           </div>
         </div>
 
-        {activeTab === 'search' ? (
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <button onClick={() => setActiveTab('info')} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-              </button>
-              <h3 className="font-semibold text-slate-800 dark:text-white">Tìm kiếm tin nhắn</h3>
-            </div>
-            <div className="relative mb-4">
-              <input
-                type="text"
-                placeholder="Nhập từ khóa tìm kiếm..."
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition text-slate-900 dark:text-white placeholder-slate-400"
-              />
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-slate-400 absolute left-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            </div>
+        {/* Tab Switcher */}
+        <div className="flex border-b border-slate-200 dark:border-slate-700">
+          <button 
+            className={`flex-1 py-3 text-[13px] font-semibold transition-colors relative ${activeTab === 'info' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+            onClick={() => setActiveTab('info')}
+          >
+            Thông tin
+            {activeTab === 'info' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400"></div>}
+          </button>
+          <button 
+            className={`flex-1 py-3 text-[13px] font-semibold transition-colors relative ${activeTab === 'search' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+            onClick={() => setActiveTab('search')}
+          >
+            Tìm kiếm
+            {activeTab === 'search' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400"></div>}
+          </button>
+        </div>
 
-            <div className="flex flex-col gap-3">
-              {isSearching ? (
-                <div className="text-center text-slate-500 dark:text-slate-400 text-sm py-4">Đang tìm kiếm...</div>
-              ) : searchResults.length > 0 ? (
-                searchResults.map(msg => (
-                  <div key={msg.id} className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition" onClick={() => {
-                    const el = document.getElementById(`msg-${msg.id}`);
-                    if (el) {
-                      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      el.classList.add('bg-indigo-100', 'dark:bg-indigo-900', 'transition-colors', 'duration-1000');
-                      setTimeout(() => el.classList.remove('bg-indigo-100', 'dark:bg-indigo-900'), 1500);
-                    }
-                  }}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-xs text-slate-800 dark:text-slate-200">{msg.sender.fullName}</span>
-                      <span className="text-[10px] text-slate-400">{new Date(msg.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">{msg.type === 'TEXT' ? msg.content : (msg.type === 'IMAGE' ? '[Hình ảnh]' : '[Tập tin]')}</p>
-                  </div>
-                ))
-              ) : searchKeyword ? (
-                <div className="text-center text-slate-500 dark:text-slate-400 text-sm py-4">Không tìm thấy kết quả phù hợp</div>
-              ) : null}
-            </div>
-          </div>
-        ) : (
-          <div className="py-2">
-            {/* Ảnh/Video */}
+        {/* Tab Content */}
+        {activeTab === 'info' ? (
+          <div className="flex flex-col pb-6">
+            
+            {/* Ảnh / Video Accordion */}
             <div className="border-b border-slate-200 dark:border-slate-700">
-              <button
-                className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              <button 
                 onClick={() => setIsMediaOpen(!isMediaOpen)}
+                className="w-full flex items-center justify-between px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
               >
-                <span className="font-semibold text-sm text-slate-800 dark:text-white">Ảnh/Video</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 text-slate-500 transition-transform ${isMediaOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  </div>
+                  <span className="font-semibold text-slate-800 dark:text-white text-[15px]">Ảnh/Video ({media.length})</span>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 text-slate-400 transition-transform ${isMediaOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
+              
               {isMediaOpen && (
                 <div className="px-4 pb-4">
                   {media.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {media.map((img, idx) => (
-                        <div key={`${img.id}-${idx}`} className="aspect-square bg-slate-200 dark:bg-slate-700 rounded-md overflow-hidden cursor-zoom-in hover:opacity-90 transition" onClick={() => setLightboxUrl({ url: `${process.env.REACT_APP_SOCKET_URL}${img.url}`, message: img.message })}>
-                          <img src={`${process.env.REACT_APP_SOCKET_URL}${img.url}`} alt="" className="w-full h-full object-cover" />
+                    <div className="grid grid-cols-3 gap-1">
+                      {media.map((item, idx) => (
+                        <div key={idx} className="aspect-square bg-slate-100 dark:bg-slate-800 rounded overflow-hidden cursor-pointer group/img relative" onClick={() => setLightboxUrl(`${process.env.REACT_APP_SOCKET_URL}${item.url}`)}>
+                          <img src={`${process.env.REACT_APP_SOCKET_URL}${item.url}`} alt="Media" className="w-full h-full object-cover transition-transform group-hover/img:scale-110" />
+                          <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-colors"></div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center text-sm text-slate-400 dark:text-slate-500 py-4">Chưa có ảnh/video nào</div>
+                    <div className="text-center py-6 text-slate-500 text-[13px]">
+                      Chưa có ảnh/video nào được chia sẻ
+                    </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* File */}
+            {/* Tài liệu Accordion */}
             <div className="border-b border-slate-200 dark:border-slate-700">
-              <button
-                className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              <button 
                 onClick={() => setIsFileOpen(!isFileOpen)}
+                className="w-full flex items-center justify-between px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
               >
-                <span className="font-semibold text-sm text-slate-800 dark:text-white">Tài liệu, Tệp tin</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 text-slate-500 transition-transform ${isFileOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  </div>
+                  <span className="font-semibold text-slate-800 dark:text-white text-[15px]">Tài liệu ({files.length})</span>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 text-slate-400 transition-transform ${isFileOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
+              
               {isFileOpen && (
-                <div className="px-4 pb-4 flex flex-col gap-2">
+                <div className="px-4 pb-4">
                   {files.length > 0 ? (
-                    files.map(f => (
-                      <a key={f.id} href={`${process.env.REACT_APP_SOCKET_URL}${f.content}`} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition group">
-                        <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{f.content.split('/').pop()}</p>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400">{new Date(f.createdAt).toLocaleDateString()}</p>
-                        </div>
-                      </a>
-                    ))
+                    <div className="flex flex-col gap-2">
+                      {files.map((file, idx) => {
+                        const fileName = file.content.split('/').pop();
+                        return (
+                          <div key={idx} className="flex items-center gap-3 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer" onClick={() => window.open(`${process.env.REACT_APP_SOCKET_URL}${file.content}`, '_blank')}>
+                            <div className="w-10 h-10 rounded bg-slate-200 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] font-medium text-slate-800 dark:text-white truncate">{fileName}</p>
+                              <p className="text-[11px] text-slate-500 truncate">Gửi bởi {file.sender?.fullName}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   ) : (
-                    <div className="text-center text-sm text-slate-400 dark:text-slate-500 py-4">Chưa có tệp tin nào</div>
+                    <div className="text-center py-6 text-slate-500 text-[13px]">
+                      Chưa có tài liệu nào được chia sẻ
+                    </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Quản lý/Bảo mật */}
-            {activeConversation.type === 'group' && (
-              <div>
-                <button
-                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                  onClick={() => setIsSettingOpen(!isSettingOpen)}
-                >
-                  <span className="font-semibold text-sm text-slate-800 dark:text-white">Thiết lập bảo mật</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 text-slate-500 transition-transform ${isSettingOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                </button>
-                {isSettingOpen && (
-                  <div className="px-4 pb-4 flex flex-col gap-1">
-                    {isAdmin && (
-                      <>
-                        <div className="flex items-center justify-between px-3 py-2.5 mb-1 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Chỉ Admin/Phó nhóm được gửi tin</span>
-                          <button
-                            onClick={handleToggleReadOnly}
-                            className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors ${activeConversation.isReadOnly ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}
-                          >
-                            <div className={`bg-white w-3.5 h-3.5 rounded-full shadow-md transform transition-transform ${activeConversation.isReadOnly ? 'translate-x-5' : ''}`}></div>
-                          </button>
-                        </div>
-                        <button
-                          onClick={handleDisbandGroup}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition w-full"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        <span className="text-sm font-medium">Giải tán nhóm</span>
-                      </button>
-                      </>
-                    )}
-                    <button
-                      onClick={handleLeaveGroup}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition w-full"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                      <span className="text-sm font-medium">Rời nhóm</span>
-                    </button>
+            {/* Thiết lập khác */}
+            <div>
+              <button 
+                onClick={() => setIsSettingOpen(!isSettingOpen)}
+                className="w-full flex items-center justify-between px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                   </div>
-                )}
+                  <span className="font-semibold text-slate-800 dark:text-white text-[15px]">Thiết lập khác</span>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 text-slate-400 transition-transform ${isSettingOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              
+              {isSettingOpen && (
+                <div className="px-2 pb-4 space-y-1">
+                  {activeConversation.type === 'group' && (
+                    <>
+                      {isAdmin && (
+                        <>
+                          <button 
+                            onClick={handleToggleReadOnly}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-left"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                            <span className="text-[14px] text-slate-700 dark:text-slate-300 flex-1">
+                              {activeConversation.isReadOnly ? 'Cho phép thành viên gửi tin nhắn' : 'Chỉ trưởng nhóm được gửi tin nhắn'}
+                            </span>
+                          </button>
+                        </>
+                      )}
+                      
+                      <button 
+                        onClick={handleLeaveGroup}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-left group/btn"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        <span className="text-[14px] text-red-600 dark:text-red-400 flex-1 font-medium">Rời nhóm</span>
+                      </button>
+
+                      {isAdmin && (
+                        <button 
+                          onClick={handleDisbandGroup}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-left group/btn"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          <span className="text-[14px] text-red-600 dark:text-red-400 flex-1 font-medium">Giải tán nhóm</span>
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  {activeConversation.type === 'direct' && (
+                    <button className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-left group/btn">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      <span className="text-[14px] text-red-600 dark:text-red-400 flex-1 font-medium">Xóa lịch sử trò chuyện</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+          </div>
+        ) : (
+          <div className="flex flex-col h-full">
+            {/* Search Input */}
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Nhập từ khóa tìm kiếm..."
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  className="w-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-full pl-10 pr-4 py-2 text-[14px] focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
               </div>
-            )}
+            </div>
+
+            {/* Search Results */}
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+              {isSearching ? (
+                <div className="flex justify-center items-center py-10">
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-500 border-t-transparent"></div>
+                </div>
+              ) : searchKeyword.trim() ? (
+                searchResults.length > 0 ? (
+                  <div className="flex flex-col gap-3">
+                    {searchResults.map((msg) => (
+                      <div key={msg.id} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-[13px] text-slate-800 dark:text-white">{msg.sender?.fullName}</span>
+                          <span className="text-[11px] text-slate-500">
+                            {new Date(msg.createdAt).toLocaleDateString('vi-VN')}
+                          </span>
+                        </div>
+                        <p className="text-[13px] text-slate-600 dark:text-slate-300 line-clamp-2">
+                          {msg.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <p className="text-slate-500 text-[14px]">Không tìm thấy tin nhắn nào</p>
+                  </div>
+                )
+              ) : (
+                <div className="text-center py-10">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <p className="text-slate-500 text-[14px]">Nhập từ khóa để tìm kiếm tin nhắn trong hội thoại</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      {activeConversation.type === 'group' && (
-        <GroupMembersModal
-          isOpen={isMembersModalOpen}
-          onClose={() => setIsMembersModalOpen(false)}
-          groupId={activeConversation.id}
-          groupName={activeConversation.name}
-        />
-      )}
-
-      {/* Image Viewer Modal - dùng lại component chuẩn giống trong chat */}
+      <GroupMembersModal 
+        isOpen={isMembersModalOpen} 
+        onClose={() => setIsMembersModalOpen(false)} 
+        groupId={activeConversation.id}
+        isAdmin={isAdmin}
+      />
+      <GroupSettingsModal 
+        isOpen={isSettingsModalOpen} 
+        onClose={() => setIsSettingsModalOpen(false)} 
+        groupId={activeConversation.id}
+        isReadOnly={activeConversation.isReadOnly}
+        isAdmin={isAdmin}
+      />
+      <CreateGroupModal 
+        isOpen={isCreateGroupModalOpen} 
+        onClose={() => setIsCreateGroupModalOpen(false)} 
+      />
       {lightboxUrl && (
-        <ImageViewerModal
-          previewData={lightboxUrl}
-          onClose={() => setLightboxUrl(null)}
-        />
-      )}
-
-      {/* Tạo nhóm trò chuyện từ 1-1 */}
-      {activeConversation.type === 'direct' && (
-        <CreateGroupModal
-          isOpen={isCreateGroupModalOpen}
-          onClose={() => setIsCreateGroupModalOpen(false)}
-          onSuccess={() => setIsCreateGroupModalOpen(false)}
-          initialSelectedUsers={[{
-            id: activeConversation.id,
-            fullName: activeConversation.name,
-            avatar: activeConversation.avatar
-          }]}
-        />
-      )}
-
-      {/* Quản lý nhóm (Mock UI) */}
-      {activeConversation.type === 'group' && (
-        <GroupSettingsModal
-          isOpen={isSettingsModalOpen}
-          onClose={() => setIsSettingsModalOpen(false)}
-          groupId={activeConversation.id}
-          isReadOnly={activeConversation.isReadOnly}
-          isAdmin={isAdmin}
+        <ImageViewerModal 
+          previewData={{ url: lightboxUrl, isOwn: false }} 
+          onClose={() => setLightboxUrl(null)} 
         />
       )}
     </div>

@@ -414,7 +414,8 @@ const Sidebar = ({ onItemClick }) => {
           avatar: groups[0].avatar, 
           role: groups[0].role,
           isReadOnly: groups[0].isReadOnly,
-          memberCount: groups[0].memberCount
+          memberCount: groups[0].memberCount,
+          canChangeGroupInfo: groups[0].canChangeGroupInfo
         });
       }
     } else {
@@ -446,8 +447,8 @@ const Sidebar = ({ onItemClick }) => {
 
   const isSearching = isSearchingContacts || isSearchingMessages;
 
-  const handleSelectConversation = (type, id, name, avatar = null, role = null, isReadOnly = false, memberCount = 0) => {
-    setActiveConversation({ type, id, name, avatar, role, isReadOnly, memberCount });
+  const handleSelectConversation = (type, id, name, avatar = null, role = null, isReadOnly = false, memberCount = 0, canChangeGroupInfo = true) => {
+    setActiveConversation({ type, id, name, avatar, role, isReadOnly, memberCount, canChangeGroupInfo });
     setSearchQuery(''); // Xóa text tìm kiếm
     onItemClick?.();
   };
@@ -802,7 +803,7 @@ const Sidebar = ({ onItemClick }) => {
                             onTogglePin={() => handleTogglePin('group', group.id)}
                             onToggleMute={() => handleToggleMute('group', group.id)}
                             onClearConversation={() => handleClearConversation('group', group.id)}
-                            onClick={() => handleSelectConversation('group', group.id, group.name, group.avatar, group.role, group.isReadOnly, group.memberCount)}
+                            onClick={() => handleSelectConversation('group', group.id, group.name, group.avatar, group.role, group.isReadOnly, group.memberCount, group.canChangeGroupInfo)}
                           />
                         );
                       })}
