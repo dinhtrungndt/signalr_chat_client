@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppRouter from './routers/AppRouter';
 import useThemeStore from './stores/theme.store';
 import GlobalUI from './components/common/GlobalUI';
+import CallModal from './components/call/CallModal';
 
 // Cấu hình React Query: cache dữ liệu thông minh
 export const queryClient = new QueryClient({
@@ -28,6 +29,7 @@ function App() {
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <GlobalUI />
+        <CallModal />
         <AppRouter />
       </QueryClientProvider>
     </HelmetProvider>

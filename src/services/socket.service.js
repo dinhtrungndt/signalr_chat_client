@@ -1,6 +1,7 @@
 import io from 'socket.io-client';
 import useAuthStore from '../stores/auth.store';
 import useChatStore from '../stores/chat.store';
+import useCallStore from '../stores/call.store';
 import tokenStorage from '../utils/tokenStorage';
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:1411';
@@ -344,6 +345,42 @@ const socketService = {
       } else {
         useChatStore.getState().setTyping('direct', data.userId, data.userId, false);
       }
+    });
+
+    // ==========================================
+    // SỰ KIỆN WEB RTC CALL
+    // ==========================================
+    socket.on('call_request', ({ callerId, callerInfo, callType }) => {
+      useCallStore.getState().receiveCall(callerId, callerInfo, callType);
+    });
+
+    socket.on('call_accept', async () => {
+      const callStore = useCallStore.getState();
+      if (callStore.isCaller && callStore.callState === 'RINGING') {
+        callStore.setCallState('IN_CALL');
+        await callStore.startPeerConnection();
+      }
+    });
+
+    socket.on('call_reject', () => {
+      useCallStore.getState().resetCall();
+      alert('Người dùng hiện đang bận hoặc đã từ chối cuộc gọi');
+    });
+
+    socket.on('call_end', () => {
+      useCallStore.getState().resetCall();
+    });
+
+    socket.on('webrtc_offer', ({ sdp }) => {
+      useCallStore.getState().handleOffer(sdp);
+    });
+
+    socket.on('webrtc_answer', ({ sdp }) => {
+      useCallStore.getState().handleAnswer(sdp);
+    });
+
+    socket.on('webrtc_ice_candidate', ({ candidate }) => {
+      useCallStore.getState().handleIceCandidate(candidate);
     });
   },
 

@@ -9,6 +9,7 @@ import uploadApi from '../../api/upload.api';
 import socketService from '../../services/socket.service';
 import useAuthStore from '../../stores/auth.store';
 import useChatStore from '../../stores/chat.store';
+import useCallStore from '../../stores/call.store';
 import useThemeStore from '../../stores/theme.store'; // For emoji-picker-react theme
 import { useUIStore } from '../../stores/ui.store';
 import WaveformPlayer from '../common/WaveformPlayer';
@@ -630,6 +631,7 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
   const pinnedMessages = useChatStore((s) => s.pinnedMessages[conversationKey] || EMPTY_ARRAY);
   const setPinnedMessages = useChatStore((s) => s.setPinnedMessages);
+  const initiateCall = useCallStore((s) => s.initiateCall);
 
   const currentUser = useAuthStore((s) => s.user);
   const [inputText, setInputText] = useState('');
@@ -1448,6 +1450,30 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
 
         {/* Các nút công cụ */}
         <div className="flex items-center gap-1 sm:gap-2 ml-auto">
+          {/* Nút Gọi Điện (Chỉ hiện khi gọi 1-1) */}
+          {activeConversation.type === 'direct' && (
+            <>
+              <button
+                onClick={() => initiateCall(activeConversation.id, { fullName: activeConversation.name, avatar: activeConversation.avatar }, 'AUDIO')}
+                title="Gọi thoại"
+                className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-500 transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => initiateCall(activeConversation.id, { fullName: activeConversation.name, avatar: activeConversation.avatar }, 'VIDEO')}
+                title="Gọi Video"
+                className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-sky-50 dark:hover:bg-sky-900/30 hover:text-sky-500 transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </>
+          )}
+
           {/* Nút tìm kiếm */}
           <button
             onClick={() => {
