@@ -850,9 +850,9 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
       // Khi admin xóa, ta xoá message khỏi store
       const data = e.detail;
       if (data.groupId) {
-        useChatStore.getState().deleteMessage('group', data.groupId, data.messageId);
+        useChatStore.getState().removeMessageForMe('group', data.groupId, data.messageId);
       } else if (data.partnerId) {
-        useChatStore.getState().deleteMessage('direct', data.partnerId, data.messageId);
+        useChatStore.getState().removeMessageForMe('direct', data.partnerId, data.messageId);
       }
       queryClient.invalidateQueries({ queryKey: ['messages', conversationKey] });
     };
