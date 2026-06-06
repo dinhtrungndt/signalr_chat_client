@@ -91,7 +91,9 @@ const socketService = {
     socket.on('addedToGroup', ({ groupId }) => {
       // Báo server cho join phòng này
       socket.emit('joinNewGroupRoom', groupId);
-      // Báo UI tải lại danh sách nhóm
+      // Xóa cache cũ và tải lại danh sách nhóm
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      queryClient.refetchQueries({ queryKey: ['my-groups'] });
       window.dispatchEvent(new Event('group_updated'));
     });
 
