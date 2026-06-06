@@ -198,6 +198,10 @@ const socketService = {
       window.dispatchEvent(new CustomEvent('message_recalled', { detail: data }));
     });
 
+    socket.on('message_deleted', (data) => {
+      window.dispatchEvent(new CustomEvent('message_deleted', { detail: data }));
+    });
+
     // ==========================================
     // SỰ KIỆN CHỈNH SỬA TIN NHẮN
     // ==========================================
@@ -376,7 +380,8 @@ const socketService = {
     socket.on('user_kicked_from_group', ({ groupId, userId }) => {
       const currentUser = useAuthStore.getState().user;
       if (currentUser?.id === userId) {
-        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+        queryClient.invalidateQueries({ queryKey: ['recent-chats'] });
         
         // Nếu đang mở group đó thì thoát ra
         const activeConv = useChatStore.getState().activeConversation;
@@ -384,6 +389,16 @@ const socketService = {
           useChatStore.getState().setActiveConversation(null);
         }
       }
+    });
+
+    socket.on('group_messages_reset', ({ groupId }) => {
+      // Làm mới danh sách tin nhắn của nhóm (Cần truyền đúng key của Client)
+      queryClient.invalidateQueries({ queryKey: ['messages', `group-${groupId}`] });
+      // Xóa cache trực tiếp trên state của zustand để xóa rác (nếu cần)
+      useChatStore.getState().messages[`group-${groupId}`] = [];
+      // Làm mới danh sách sidebar để mất subtitle/unread nếu có
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-chats'] });
     });
 
     socket.on('user_updated', () => {

@@ -844,10 +844,24 @@ const ChatWindow = ({ onOpenSidebar, onToggleRightSidebar }) => {
   useEffect(() => {
     const handleMessageRecalled = () => {
       // Khi có tin nhắn bị thu hồi, ta xoá cache query để nếu scroll up nó sẽ lấy đúng dữ liệu mới
-      queryClient.invalidateQueries(['messages', conversationKey]);
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationKey] });
+    };
+    const handleMessageDeleted = (e) => {
+      // Khi admin xóa, ta xoá message khỏi store
+      const data = e.detail;
+      if (data.groupId) {
+        useChatStore.getState().deleteMessage('group', data.groupId, data.messageId);
+      } else if (data.partnerId) {
+        useChatStore.getState().deleteMessage('direct', data.partnerId, data.messageId);
+      }
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationKey] });
     };
     window.addEventListener('message_recalled', handleMessageRecalled);
-    return () => window.removeEventListener('message_recalled', handleMessageRecalled);
+    window.addEventListener('message_deleted', handleMessageDeleted);
+    return () => {
+      window.removeEventListener('message_recalled', handleMessageRecalled);
+      window.removeEventListener('message_deleted', handleMessageDeleted);
+    };
   }, [conversationKey]);
 
   // Trạng thái lưu lại tin nhắn cũ để so sánh
