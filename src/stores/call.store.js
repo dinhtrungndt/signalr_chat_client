@@ -103,17 +103,17 @@ const useCallStore = create((set, get) => ({
   },
 
   rejectCall: () => {
-    const { remoteUser, isCaller } = get();
+    const { remoteUser, isCaller, callType } = get();
     if (remoteUser && !isCaller) {
-      socketService.getSocket()?.emit('call_reject', { callerId: remoteUser.id });
+      socketService.getSocket()?.emit('call_reject', { callerId: remoteUser.id, callType });
     }
     get().resetCall();
   },
 
-  endCall: () => {
-    const { remoteUser } = get();
+  endCall: (duration = 0) => {
+    const { remoteUser, callType } = get();
     if (remoteUser) {
-      socketService.getSocket()?.emit('call_end', { peerId: remoteUser.id });
+      socketService.getSocket()?.emit('call_end', { peerId: remoteUser.id, duration, callType });
     }
     get().resetCall();
   },

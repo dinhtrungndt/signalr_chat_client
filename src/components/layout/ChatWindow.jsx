@@ -493,6 +493,42 @@ const MessageItem = ({
         {message.type === 'NOTE' && <ChatNoteWidget noteId={message.content} />}
         {message.type === 'REMINDER' && <ChatReminderWidget reminderId={message.content} />}
         {message.type === 'RECALLED' && message.content}
+        {message.type === 'CALL_MISSED' && (
+          <div className="flex items-center gap-2 font-medium text-red-500">
+            <div className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+              </svg>
+            </div>
+            <span>Cuộc gọi nhỡ</span>
+          </div>
+        )}
+        {message.type === 'CALL_ENDED' && (() => {
+          let duration = 0;
+          let callTypeStr = 'Thoại';
+          try { 
+            const contentData = JSON.parse(message.content); 
+            duration = contentData.duration;
+            callTypeStr = contentData.callType === 'VIDEO' ? 'Video' : 'Thoại';
+          } catch { /* ignore */ }
+          
+          const m = Math.floor(duration / 60);
+          const s = duration % 60;
+          const durationText = m > 0 ? `${m} phút ${s} giây` : `${s} giây`;
+          return (
+            <div className="flex items-center gap-2 font-medium">
+              <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                </svg>
+              </div>
+              <div className="flex flex-col">
+                <span>Cuộc gọi {callTypeStr}</span>
+                <span className="opacity-80 text-[11px] font-normal">{durationText}</span>
+              </div>
+            </div>
+          );
+        })()}
         {message.type === 'IMAGE' && (() => {
           const urls = message.content.split('|');
           if (urls.length === 1) {

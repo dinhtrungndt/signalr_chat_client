@@ -35,7 +35,7 @@ const IncomingGroupCallToast = () => {
   if (!incomingGroupCall) return null;
 
   return createPortal(
-    <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[99999] animate-fade-in-down shadow-2xl rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-indigo-500/30 w-[90%] max-w-sm p-4 text-white flex items-center gap-4">
+    <div className="fixed top-4 left-4 right-4 mx-auto z-[99999] animate-fade-in-down shadow-2xl rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-indigo-500/30 max-w-sm p-4 text-white flex items-center gap-4">
       {/* Icon */}
       <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 relative shrink-0">
         <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">

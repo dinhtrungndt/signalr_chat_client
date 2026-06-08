@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import useCallStore, { rtcManager } from '../../stores/call.store';
 import useAuthStore from '../../stores/auth.store';
 
@@ -14,6 +14,26 @@ const CallModal = () => {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const ringtoneRef = useRef(null);
+
+  const [callDuration, setCallDuration] = useState(0);
+
+  useEffect(() => {
+    let interval;
+    if (callState === 'IN_CALL') {
+      interval = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      setCallDuration(0);
+    }
+    return () => clearInterval(interval);
+  }, [callState]);
+
+  const formatDuration = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     // Chỉ phát nhạc chuông gọi đi (caller). Nhạc chuông gọi đến do IncomingCallToast xử lý.
@@ -82,10 +102,15 @@ const CallModal = () => {
         )}
         
         <h2 className="text-3xl font-bold mb-2">{remoteUser.fullName}</h2>
-        <p className="text-slate-400 text-lg">
+        <p className="text-slate-400 text-lg flex items-center gap-2">
           {callState === 'RINGING' 
             ? (isCaller ? `Đang gọi ${callType === 'VIDEO' ? 'Video' : 'Thoại'}...` : `Cuộc gọi ${callType === 'VIDEO' ? 'Video' : 'Thoại'} đến...`) 
-            : `Cuộc gọi ${callType === 'VIDEO' ? 'Video' : 'Thoại'} đang diễn ra`}
+            : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                {formatDuration(callDuration)}
+              </>
+            )}
         </p>
       </div>
 
@@ -224,7 +249,7 @@ const CallModal = () => {
 
         {/* Decline/End Call Button */}
         <button 
-          onClick={callState === 'RINGING' && !isCaller ? rejectCall : endCall}
+          onClick={() => callState === 'RINGING' && !isCaller ? rejectCall() : endCall(callDuration)}
           className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center shadow-lg shadow-red-500/30 transition-transform hover:scale-110"
           title="Kết thúc cuộc gọi"
         >

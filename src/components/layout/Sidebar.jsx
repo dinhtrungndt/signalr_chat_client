@@ -30,6 +30,8 @@ const getSubtitle = (lastMessage, prefix) => {
   if (lastMessage.type === 'IMAGE') text = 'Đã gửi một hình ảnh';
   if (lastMessage.type === 'FILE') text = 'Đã gửi một tệp đính kèm';
   if (lastMessage.type === 'AUDIO') text = 'Đã gửi một tin nhắn thoại';
+  if (lastMessage.type === 'CALL_MISSED') return prefix ? `📞 Cuộc gọi nhỡ` : `📞 Cuộc gọi nhỡ`;
+  if (lastMessage.type === 'CALL_ENDED') return prefix ? `📞 Cuộc gọi thoại` : `📞 Cuộc gọi thoại`;
   return prefix ? `${prefix}: ${text}` : text;
 };
 
@@ -688,7 +690,7 @@ const Sidebar = ({ onItemClick }) => {
                             </div>
                             <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">
                               <span className="font-medium text-slate-700 dark:text-slate-300">{msg.sender?.fullName}: </span>
-                              {msg.type === 'TEXT' ? msg.content : (msg.type === 'IMAGE' ? '[Hình ảnh]' : '[Tập tin]')}
+                              {msg.type === 'TEXT' ? msg.content : (msg.type === 'IMAGE' ? '[Hình ảnh]' : (msg.type === 'CALL_MISSED' ? '📞 Cuộc gọi nhỡ' : (msg.type === 'CALL_ENDED' ? '📞 Cuộc gọi thoại' : '[Tập tin]')))}
                             </p>
                           </div>
                         );
