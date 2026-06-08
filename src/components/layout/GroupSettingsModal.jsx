@@ -23,14 +23,29 @@ const GroupSettingsModal = ({ isOpen, onClose, groupId, isReadOnly, isAdmin }) =
   const [highlightAdmin, setHighlightAdmin] = useState(activeConversation?.highlightAdminMessages ?? true);
   const [readHistory, setReadHistory] = useState(activeConversation?.joinerCanReadHistory ?? true);
 
+  React.useEffect(() => {
+    setCanChangeName(activeConversation?.canChangeGroupInfo ?? true);
+    setCanPin(activeConversation?.canPinMessages ?? true);
+    setCanNote(activeConversation?.canCreateNotes ?? true);
+    setCanPoll(activeConversation?.canCreatePolls ?? true);
+    setCanSendMsg(!activeConversation?.isReadOnly);
+    setApprovalMode(activeConversation?.requireApproval ?? false);
+    setHighlightAdmin(activeConversation?.highlightAdminMessages ?? true);
+    setReadHistory(activeConversation?.joinerCanReadHistory ?? true);
+  }, [activeConversation]);
+
   if (!isOpen) return null;
 
   const handleToggleReadOnly = async () => {
     if (!isAdmin) return;
     try {
       setIsSubmitting(true);
-      await groupApi.toggleReadOnly(groupId, canSendMsg); // canSendMsg is current state, so passing true means isReadOnly = true
-      setCanSendMsg(!canSendMsg); // Đảo state
+      await groupApi.toggleReadOnly(groupId, canSendMsg); 
+      setCanSendMsg(!canSendMsg); 
+      useChatStore.getState().setActiveConversation({
+        ...activeConversation,
+        isReadOnly: canSendMsg
+      });
       queryClient.invalidateQueries(['my-groups']);
     } catch (err) {
       useUIStore.getState().showToast('Có lỗi khi thay đổi quyền gửi tin nhắn', 'error');

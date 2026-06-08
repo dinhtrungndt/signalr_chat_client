@@ -394,13 +394,17 @@ const socketService = {
     });
 
     socket.on('group_messages_reset', ({ groupId }) => {
-      // Làm mới danh sách tin nhắn của nhóm (Cần truyền đúng key của Client)
-      queryClient.invalidateQueries({ queryKey: ['messages', `group-${groupId}`] });
-      // Xóa cache trực tiếp trên state của zustand để xóa rác (nếu cần)
-      useChatStore.getState().messages[`group-${groupId}`] = [];
+      // Xóa tin nhắn trong Zustand store (dùng đúng key format: group_${id})
+      useChatStore.getState().initMessages('group', groupId, []);
+      // Xóa pinned messages nếu có
+      useChatStore.getState().setPinnedMessages('group', groupId, []);
       // Làm mới danh sách sidebar để mất subtitle/unread nếu có
       queryClient.invalidateQueries({ queryKey: ['my-groups'] });
       queryClient.invalidateQueries({ queryKey: ['recent-chats'] });
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+      queryClient.invalidateQueries({ queryKey: ['reminders'] });
+      queryClient.invalidateQueries({ queryKey: ['polls'] });
+      window.dispatchEvent(new Event('group_updated'));
     });
 
     socket.on('user_updated', () => {
