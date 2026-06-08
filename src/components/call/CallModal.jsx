@@ -16,13 +16,9 @@ const CallModal = () => {
   const ringtoneRef = useRef(null);
 
   useEffect(() => {
-    // Play ringtone when ringing
-    if (callState === 'RINGING') {
-      const audioUrl = isCaller 
-        ? 'https://assets.mixkit.co/active_storage/sfx/2865/2865-preview.mp3' // Outgoing ringing
-        : 'https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3'; // Incoming ringtone
-      
-      const audio = new Audio(audioUrl);
+    // Chỉ phát nhạc chuông gọi đi (caller). Nhạc chuông gọi đến do IncomingCallToast xử lý.
+    if (callState === 'RINGING' && isCaller) {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2865/2865-preview.mp3');
       audio.loop = true;
       audio.play().catch(e => console.log('Audio autoplay blocked', e));
       ringtoneRef.current = audio;
@@ -60,6 +56,9 @@ const CallModal = () => {
   }, [callState]);
 
   if (callState === 'IDLE' || !remoteUser) return null;
+
+  // Cuộc gọi đến đang đổ chuông → hiển thị bằng IncomingCallToast thay vì fullscreen
+  if (callState === 'RINGING' && !isCaller) return null;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-slate-900/95 flex flex-col items-center justify-center text-white backdrop-blur-xl animate-fade-in">

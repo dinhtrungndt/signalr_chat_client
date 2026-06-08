@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { HelmetProvider } from 'react-helmet-async';
 import CallModal from './components/call/CallModal';
+import IncomingCallToast from './components/call/IncomingCallToast';
 import IncomingGroupCallToast from './components/call/IncomingGroupCallToast';
 import ZegoGroupCallModal from './components/call/ZegoGroupCallModal';
 import GlobalUI from './components/common/GlobalUI';
@@ -32,6 +33,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <GlobalUI />
         <CallModal />
+        <IncomingCallToast />
         <ZegoGroupCallModal />
         <IncomingGroupCallToast />
         <AppRouter />
