@@ -1,21 +1,22 @@
-import React, { useEffect, useState, useRef } from 'react';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
 import groupApi from '../../api/group.api';
 import messageApi from '../../api/message.api';
+import noteApi from '../../api/note.api';
+import pollApi from '../../api/poll.api';
+import reminderApi from '../../api/reminder.api';
 import userApi from '../../api/user.api';
 import useAuthStore from '../../stores/auth.store';
-import { useUIStore } from '../../stores/ui.store';
 import useChatStore from '../../stores/chat.store';
-import noteApi from '../../api/note.api';
-import reminderApi from '../../api/reminder.api';
-import pollApi from '../../api/poll.api';
-import GroupMembersModal from './GroupMembersModal';
-import ImageViewerModal from './ImageViewerModal';
+import { useUIStore } from '../../stores/ui.store';
 import CreateGroupModal from './CreateGroupModal';
-import GroupSettingsModal from './GroupSettingsModal';
 import CreateNoteModal from './CreateNoteModal';
-import CreateReminderModal from './CreateReminderModal';
 import CreatePollModal from './CreatePollModal';
+import CreateReminderModal from './CreateReminderModal';
+import GroupMembersModal from './GroupMembersModal';
+import GroupSettingsModal from './GroupSettingsModal';
+import ImageViewerModal from './ImageViewerModal';
 
 const EMPTY_ARRAY = [];
 
@@ -27,8 +28,8 @@ const ActionBtn = ({ icon, label, onClick, isActive, activeIcon }) => {
       className="flex flex-col items-center gap-2 group w-18"
     >
       <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-        isActive 
-          ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
+        isActive
+          ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
           : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
       }`}>
         {isActive && activeIcon ? activeIcon : icon}
@@ -68,7 +69,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
-  
+
   const [isCreateNoteModalOpen, setIsCreateNoteModalOpen] = useState(false);
   const [isCreateReminderModalOpen, setIsCreateReminderModalOpen] = useState(false);
   const [isCreatePollModalOpen, setIsCreatePollModalOpen] = useState(false);
@@ -315,7 +316,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {/* Avatar & Name */}
         <div className="flex flex-col items-center justify-center p-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-          
+
           {/* AVATAR WITH UPLOAD */}
           <div className="relative group/avatar cursor-pointer" onClick={() => canEditGroupInfo && avatarInputRef.current?.click()}>
             {activeConversation.avatar ? (
@@ -325,7 +326,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                 {activeConversation.name?.charAt(0).toUpperCase()}
               </div>
             )}
-            
+
             {canEditGroupInfo && (
               <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity mb-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -337,8 +338,8 @@ const RightSidebar = ({ onClose, onImageClick }) => {
           {/* NAME WITH EDITING */}
           <div className="flex items-center gap-2 group/name mt-2">
             {isEditingName ? (
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 onBlur={handleSaveName}
@@ -347,7 +348,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                 className="text-lg font-bold text-slate-800 dark:text-white bg-transparent border-b-2 border-indigo-500 outline-none px-1 text-center w-full min-w-[150px]"
               />
             ) : (
-              <h3 
+              <h3
                 className={`text-lg font-bold text-slate-800 dark:text-white ${canEditGroupInfo ? 'cursor-pointer hover:underline' : ''}`}
                 onClick={() => {
                   if (canEditGroupInfo) {
@@ -359,9 +360,9 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                 {activeConversation.name}
               </h3>
             )}
-            
+
             {canEditGroupInfo && !isEditingName && (
-              <button 
+              <button
                 onClick={() => {
                   setEditName(activeConversation.name);
                   setIsEditingName(true);
@@ -376,51 +377,51 @@ const RightSidebar = ({ onClose, onImageClick }) => {
           <div className="flex items-start justify-center gap-2 sm:gap-4 mt-6">
             {activeConversation.type === 'direct' ? (
               <>
-                <ActionBtn 
+                <ActionBtn
                   icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>}
                   activeIcon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h3.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>}
-                  label={isMuted ? "Bật thông báo" : "Tắt thông báo"} 
+                  label={isMuted ? "Bật thông báo" : "Tắt thông báo"}
                   isActive={isMuted}
-                  onClick={handleToggleMute} 
+                  onClick={handleToggleMute}
                 />
-                <ActionBtn 
+                <ActionBtn
                   icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>}
                   activeIcon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" /></svg>}
-                  label={isPinned ? "Bỏ ghim hội thoại" : "Ghim hội thoại"} 
+                  label={isPinned ? "Bỏ ghim hội thoại" : "Ghim hội thoại"}
                   isActive={isPinned}
-                  onClick={handleTogglePin} 
+                  onClick={handleTogglePin}
                 />
-                <ActionBtn 
+                <ActionBtn
                   icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>}
-                  label="Tạo nhóm trò chuyện" 
-                  onClick={() => setIsCreateGroupModalOpen(true)} 
+                  label="Tạo nhóm trò chuyện"
+                  onClick={() => setIsCreateGroupModalOpen(true)}
                 />
               </>
             ) : (
               <>
-                <ActionBtn 
+                <ActionBtn
                   icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>}
                   activeIcon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h3.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>}
-                  label={isMuted ? "Bật thông báo" : "Tắt thông báo"} 
+                  label={isMuted ? "Bật thông báo" : "Tắt thông báo"}
                   isActive={isMuted}
-                  onClick={handleToggleMute} 
+                  onClick={handleToggleMute}
                 />
-                <ActionBtn 
+                <ActionBtn
                   icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>}
                   activeIcon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" /></svg>}
-                  label={isPinned ? "Bỏ ghim hội thoại" : "Ghim hội thoại"} 
+                  label={isPinned ? "Bỏ ghim hội thoại" : "Ghim hội thoại"}
                   isActive={isPinned}
-                  onClick={handleTogglePin} 
+                  onClick={handleTogglePin}
                 />
-                <ActionBtn 
+                {/* <ActionBtn
                   icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>}
-                  label="Thêm thành viên" 
-                  onClick={() => setIsMembersModalOpen(true)} 
-                />
-                <ActionBtn 
+                  label="Thêm thành viên"
+                  onClick={() => setIsMembersModalOpen(true)}
+                /> */}
+                <ActionBtn
                   icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
-                  label="Quản lý nhóm" 
-                  onClick={() => setIsSettingsModalOpen(true)} 
+                  label="Quản lý nhóm"
+                  onClick={() => setIsSettingsModalOpen(true)}
                 />
               </>
             )}
@@ -429,14 +430,14 @@ const RightSidebar = ({ onClose, onImageClick }) => {
 
         {/* Tab Switcher */}
         <div className="flex border-b border-slate-200 dark:border-slate-700">
-          <button 
+          <button
             className={`flex-1 py-3 text-[13px] font-semibold transition-colors relative ${activeTab === 'info' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
             onClick={() => setActiveTab('info')}
           >
             Thông tin
             {activeTab === 'info' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400"></div>}
           </button>
-          <button 
+          <button
             className={`flex-1 py-3 text-[13px] font-semibold transition-colors relative ${activeTab === 'search' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
             onClick={() => setActiveTab('search')}
           >
@@ -448,10 +449,10 @@ const RightSidebar = ({ onClose, onImageClick }) => {
         {/* Tab Content */}
         {activeTab === 'info' ? (
           <div className="flex flex-col pb-6">
-            
+
             {/* Ảnh / Video Accordion */}
             <div className="border-b border-slate-200 dark:border-slate-700">
-              <button 
+              <button
                 onClick={() => setIsMediaOpen(!isMediaOpen)}
                 className="w-full flex items-center justify-between px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
               >
@@ -463,7 +464,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 text-slate-400 transition-transform ${isMediaOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
-              
+
               {isMediaOpen && (
                 <div className="px-4 pb-4">
                   {media.length > 0 ? (
@@ -486,7 +487,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
 
             {/* Tài liệu Accordion */}
             <div className="border-b border-slate-200 dark:border-slate-700">
-              <button 
+              <button
                 onClick={() => setIsFileOpen(!isFileOpen)}
                 className="w-full flex items-center justify-between px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
               >
@@ -498,7 +499,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 text-slate-400 transition-transform ${isFileOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
-              
+
               {isFileOpen && (
                 <div className="px-4 pb-4">
                   {files.length > 0 ? (
@@ -546,7 +547,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                   <svg onClick={() => setIsNotesOpen(!isNotesOpen)} xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 text-slate-400 cursor-pointer transition-transform ${isNotesOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                 </div>
               </div>
-              
+
               {isNotesOpen && (
                 <div className="px-4 pb-4">
                   {(notesList.length > 0 || remindersList.length > 0) ? (
@@ -562,7 +563,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                               {new Date(reminder.dueDate).toLocaleString()}
                             </p>
                             {!reminder.isDone && (
-                              <button 
+                              <button
                                 onClick={() => reminderApi.updateStatus(reminder.id, true).then(() => queryClient.invalidateQueries(['reminders']))}
                                 className="mt-2 text-[11px] bg-green-100 text-green-700 px-2 py-1 rounded font-medium hover:bg-green-200"
                               >
@@ -605,7 +606,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                     <svg onClick={() => setIsPollsOpen(!isPollsOpen)} xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 text-slate-400 cursor-pointer transition-transform ${isPollsOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </div>
                 </div>
-                
+
                 {isPollsOpen && (
                   <div className="px-4 pb-4">
                     {pollsList.length > 0 ? (
@@ -618,9 +619,9 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                                 const totalVotes = poll.options.reduce((sum, o) => sum + o.votes.length, 0);
                                 const percentage = totalVotes > 0 ? Math.round((opt.votes.length / totalVotes) * 100) : 0;
                                 const isVotedByMe = opt.votes.some(v => v.userId === currentUser?.id);
-                                
+
                                 return (
-                                  <div key={opt.id} 
+                                  <div key={opt.id}
                                     className="relative flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 cursor-pointer overflow-hidden group"
                                     onClick={() => {
                                       if (poll.isClosed) return;
@@ -666,7 +667,7 @@ const RightSidebar = ({ onClose, onImageClick }) => {
 
             {/* Thiết lập khác */}
             <div>
-              <button 
+              <button
                 onClick={() => setIsSettingOpen(!isSettingOpen)}
                 className="w-full flex items-center justify-between px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
               >
@@ -678,14 +679,14 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 text-slate-400 transition-transform ${isSettingOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
-              
+
               {isSettingOpen && (
                 <div className="px-2 pb-4 space-y-1">
                   {activeConversation.type === 'group' && (
                     <>
                       {isAdmin && (
                         <>
-                          <button 
+                          <button
                             onClick={handleToggleReadOnly}
                             className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-left"
                           >
@@ -696,24 +697,24 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                           </button>
                         </>
                       )}
-                      
-                      <button 
+
+                      {/* <button
                         onClick={handleLeaveGroup}
                         className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-left group/btn"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                         <span className="text-[14px] text-red-600 dark:text-red-400 flex-1 font-medium">Rời nhóm</span>
-                      </button>
+                      </button> */}
 
-                      {isAdmin && (
-                        <button 
+                      {/* {isAdmin && (
+                        <button
                           onClick={handleDisbandGroup}
                           className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-left group/btn"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           <span className="text-[14px] text-red-600 dark:text-red-400 flex-1 font-medium">Giải tán nhóm</span>
                         </button>
-                      )}
+                      )} */}
                     </>
                   )}
 
@@ -756,8 +757,8 @@ const RightSidebar = ({ onClose, onImageClick }) => {
                 searchResults.length > 0 ? (
                   <div className="flex flex-col gap-3">
                     {searchResults.map((msg) => (
-                      <div 
-                        key={msg.id} 
+                      <div
+                        key={msg.id}
                         className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800"
                         onClick={() => {
                           const el = document.getElementById(`msg-${msg.id}`);
@@ -802,31 +803,31 @@ const RightSidebar = ({ onClose, onImageClick }) => {
       </div>
 
       {/* Modals */}
-      <GroupMembersModal 
-        isOpen={isMembersModalOpen} 
-        onClose={() => setIsMembersModalOpen(false)} 
+      <GroupMembersModal
+        isOpen={isMembersModalOpen}
+        onClose={() => setIsMembersModalOpen(false)}
         groupId={activeConversation.id}
         isAdmin={isAdmin}
       />
-      <GroupSettingsModal 
-        isOpen={isSettingsModalOpen} 
-        onClose={() => setIsSettingsModalOpen(false)} 
+      <GroupSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
         groupId={activeConversation.id}
         isReadOnly={activeConversation.isReadOnly}
         isAdmin={isAdmin}
       />
-      <CreateGroupModal 
-        isOpen={isCreateGroupModalOpen} 
-        onClose={() => setIsCreateGroupModalOpen(false)} 
+      <CreateGroupModal
+        isOpen={isCreateGroupModalOpen}
+        onClose={() => setIsCreateGroupModalOpen(false)}
       />
       <CreateNoteModal isOpen={isCreateNoteModalOpen} onClose={() => setIsCreateNoteModalOpen(false)} />
       <CreateReminderModal isOpen={isCreateReminderModalOpen} onClose={() => setIsCreateReminderModalOpen(false)} />
       <CreatePollModal isOpen={isCreatePollModalOpen} onClose={() => setIsCreatePollModalOpen(false)} />
-      
+
       {lightboxUrl && (
-        <ImageViewerModal 
-          previewData={{ url: lightboxUrl, isOwn: false }} 
-          onClose={() => setLightboxUrl(null)} 
+        <ImageViewerModal
+          previewData={{ url: lightboxUrl, isOwn: false }}
+          onClose={() => setLightboxUrl(null)}
         />
       )}
     </div>

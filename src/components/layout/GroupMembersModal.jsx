@@ -1,17 +1,17 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import groupApi from '../../api/group.api';
 import userApi from '../../api/user.api';
 import useAuthStore from '../../stores/auth.store';
-import { useUIStore } from '../../stores/ui.store';
 import useChatStore from '../../stores/chat.store';
+import { useUIStore } from '../../stores/ui.store';
 
 const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
   const queryClient = useQueryClient();
   const onlineUsers = useChatStore((s) => s.onlineUsers);
   const currentUser = useAuthStore((s) => s.user);
-  
+
   const [activeTab, setActiveTab] = useState('members'); // 'members', 'add'
   const [searchQuery, setSearchQuery] = useState('');
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
@@ -56,12 +56,12 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
       });
       return result;
     };
-    
+
     const flattened = flatten(membersData);
     let filtered = flattened;
     if (searchQueryMembers.trim()) {
       const q = searchQueryMembers.toLowerCase();
-      filtered = flattened.filter(m => 
+      filtered = flattened.filter(m =>
         (m.user?.fullName || '').toLowerCase().includes(q) ||
         (m.user?.username || '').toLowerCase().includes(q)
       );
@@ -74,7 +74,7 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
     });
   }, [membersData, searchQueryMembers]);
 
-  const myMemberInfo = members.find((m) => m.userId === currentUser?.id) || 
+  const myMemberInfo = members.find((m) => m.userId === currentUser?.id) ||
     (membersData ? (function findMe(nodes){
        for(const n of nodes){
          if(n.userId===currentUser?.id)return n;
@@ -128,11 +128,11 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
 
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
-      <div 
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+      <div
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      
+
       <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col max-h-[85vh] relative transform transition-all scale-100 opacity-100 border border-slate-200 dark:border-slate-700">
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
           <div>
@@ -302,7 +302,7 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
                           onClick={() => addMutation.mutate(u.id)}
                           disabled={isAlreadyMember || addMutation.isLoading}
                           className={`px-3 py-1.5 text-xs font-medium rounded-lg transition ${
-                            isAlreadyMember 
+                            isAlreadyMember
                               ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                               : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
                           }`}
@@ -321,7 +321,7 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+        {/* <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex gap-3">
           {isAdmin && (
             <button
               onClick={async () => {
@@ -341,18 +341,18 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
           >
             Rời nhóm
           </button>
-        </div>
+        </div> */}
 
         {/* Modal Xác nhận rời nhóm */}
-        {isLeaveConfirmOpen && (
+        {/* {isLeaveConfirmOpen && (
           <div className="absolute inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white dark:bg-slate-900 rounded-2xl w-full p-5 shadow-xl border border-slate-200 dark:border-slate-700">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Rời khỏi nhóm</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Bạn có chắc chắn muốn rời nhóm này không?</p>
-              
+
               <label className="flex items-center gap-2 mb-5 cursor-pointer">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={isSilentLeave}
                   onChange={(e) => setIsSilentLeave(e.target.checked)}
                   className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
@@ -361,13 +361,13 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
               </label>
 
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={() => setIsLeaveConfirmOpen(false)}
                   className="flex-1 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition"
                 >
                   Huỷ
                 </button>
-                <button 
+                <button
                   onClick={() => {
                     removeMutation.mutate({ userId: currentUser.id, silent: isSilentLeave }, {
                       onSuccess: () => {
@@ -384,7 +384,7 @@ const GroupMembersModal = ({ isOpen, onClose, groupId }) => {
               </div>
             </div>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

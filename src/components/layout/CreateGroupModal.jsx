@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import groupApi from '../../api/group.api';
 import userApi from '../../api/user.api';
 import useDebounce from '../../hooks/useDebounce';
@@ -37,7 +37,7 @@ const CreateGroupModal = ({ isOpen, onClose, onSuccess, initialSelectedUsers = [
   const handleCreate = async () => {
     setError('');
     const trimmedName = groupName.trim();
-    
+
     if (!trimmedName) {
       setError('Vui lòng nhập tên nhóm');
       return;
@@ -89,14 +89,14 @@ const CreateGroupModal = ({ isOpen, onClose, onSuccess, initialSelectedUsers = [
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+      <div
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
         onClick={!isSubmitting ? onClose : undefined}
       />
-      
+
       {/* Modal Box */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh] relative transform transition-all scale-100 opacity-100 border border-slate-200 dark:border-slate-700">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
           <div>
@@ -138,15 +138,15 @@ const CreateGroupModal = ({ isOpen, onClose, onSuccess, initialSelectedUsers = [
 
             {/* Tìm kiếm thành viên */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              {/* <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Thêm thành viên</label>
                 {selectedUsers.length > 0 && (
                   <span className="text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full">
                     Đã chọn {selectedUsers.length}
                   </span>
                 )}
-              </div>
-              
+              </div> */}
+
               <div className="relative mb-4">
                 <input
                   type="text"
@@ -182,7 +182,7 @@ const CreateGroupModal = ({ isOpen, onClose, onSuccess, initialSelectedUsers = [
                           <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600'}`}>
                             {isSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                           </div>
-                          
+
                           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-sm shrink-0">
                             {u.fullName?.charAt(0)?.toUpperCase() || '?'}
                           </div>
